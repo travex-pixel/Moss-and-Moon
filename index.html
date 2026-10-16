@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no, maximum-scale=1">
+<meta name="theme-color" content="#2c2a4a">
+<meta name="description" content="Moss & Moon — tap a glowing seed and wake a tiny watercolor garden with a chain of blooms.">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Moss & Moon">
+<meta property="og:title" content="Moss & Moon — wake the garden">
+<meta property="og:description" content="Tap one glowing seed and watch a tiny watercolor garden bloom in a chain. A one-minute game with very small, very round creatures.">
+<meta property="og:url" content="https://travex-pixel.github.io/Moss-and-Moon/">
+<meta property="og:image" content="https://travex-pixel.github.io/Moss-and-Moon/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A sleepy watercolor garden under a big moon, with a chain of pastel flowers blooming and a tiny moss creature watching.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Moss & Moon — wake the garden">
+<meta name="twitter:description" content="Tap one glowing seed and watch a tiny watercolor garden bloom in a chain.">
+<meta name="twitter:image" content="https://travex-pixel.github.io/Moss-and-Moon/og.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Moss & Moon</title>
+<style>
+  :root {
+    --cream: #fff4e1;
+    --ink: #3f3350;
+    --ink-soft: rgba(63,51,80,.7);
+    --sage: #9fc39b;
+    --pink: #f6b8c6;
+    --butter: #ffe59a;
+    --lavender: #c9b8ef;
+    --sky: #a9d4f0;
+    --moon: #fff2c4;
+    --card: rgba(255,247,232,.94);
+    --shadow: 0 18px 40px rgba(40,30,70,.35);
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    overflow: hidden; background: #2c2a4a;
+    font-family: "Nunito", "Quicksand", "Varela Round", "Segoe UI Rounded", "Avenir Next Rounded", ui-rounded, "Hiragino Maru Gothic ProN", "Trebuchet MS", system-ui, sans-serif;
+    color: var(--ink);
+    overscroll-behavior: none;
+    touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { position: fixed; inset: 0; }
+  #stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; outline: none; }
+  #stage:focus-visible { box-shadow: inset 0 0 0 3px rgba(255,240,190,.6); }
+
+  /* ---------- HUD ---------- */
+  .hud {
+    position: fixed; left: 0; right: 0; top: 0;
+    padding: calc(10px + var(--sat)) calc(12px + var(--sar)) 0 calc(12px + var(--sal));
+    display: flex; justify-content: space-between; align-items: flex-start;
+    pointer-events: none; z-index: 12;
+  }
+  .hud > * { pointer-events: auto; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    min-height: 44px; padding: 8px 14px 8px 11px;
+    border-radius: 999px;
+    background: rgba(44,36,70,.42);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    color: var(--cream); font-weight: 800; font-size: 18px; letter-spacing: .2px;
+    box-shadow: 0 4px 14px rgba(20,10,40,.25), inset 0 0 0 1px rgba(255,255,255,.14);
+    transition: transform .18s cubic-bezier(.2,1.4,.4,1);
+  }
+  .pill.pop { transform: scale(1.12); }
+  .pill .drop { width: 18px; height: 22px; display: block; }
+  .pill .label { font-size: 12px; font-weight: 700; opacity: .8; margin-left: 2px; }
+  .hud-right { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 0; padding: 0; cursor: pointer;
+    background: rgba(44,36,70,.42);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 14px rgba(20,10,40,.25), inset 0 0 0 1px rgba(255,255,255,.14);
+    color: var(--cream); display: grid; place-items: center;
+    transition: transform .15s cubic-bezier(.2,1.4,.4,1), background .2s;
+  }
+  .icon-btn:active { transform: scale(.9); }
+  .icon-btn:focus-visible { outline: 3px solid var(--butter); outline-offset: 2px; }
+  .icon-btn svg { width: 22px; height: 22px; display: block; }
+  .icon-btn .off { display: none; }
+  .icon-btn.muted .on { display: none; }
+  .icon-btn.muted .off { display: block; }
+
+  /* sparks (taps left) */
+  .sparks {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(18px + var(--sab));
+    display: flex; gap: 10px; align-items: center; z-index: 5;
+    pointer-events: none;
+    padding: 8px 14px; border-radius: 999px;
+    background: rgba(44,36,70,.32);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    opacity: 0; transition: opacity .4s;
+  }
+  .sparks.show { opacity: 1; }
+  .sparks .lbl { color: var(--cream); font-size: 12px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; opacity: .85; margin-right: 2px; }
+  .spark {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #fff9dc, #ffd36a 55%, #f39b5a);
+    box-shadow: 0 0 10px 2px rgba(255,220,120,.7);
+    transition: transform .35s cubic-bezier(.2,1.4,.4,1), opacity .35s, filter .35s;
+  }
+  .spark.used { transform: scale(.55); opacity: .28; filter: grayscale(.6); box-shadow: none; }
+
+  /* chain banner */
+  .chain {
+    position: fixed; left: 50%; top: 24%;
+    transform: translate(-50%, -50%) scale(.6);
+    z-index: 4; pointer-events: none; opacity: 0;
+    text-align: center;
+    transition: transform .22s cubic-bezier(.2,1.6,.4,1), opacity .2s;
+    text-shadow: 0 2px 0 rgba(90,40,90,.25), 0 6px 22px rgba(70,30,90,.35);
+  }
+  .chain.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .chain .n { font-size: 54px; font-weight: 900; color: var(--moon); line-height: 1; letter-spacing: -1px; }
+  .chain .t { font-size: 15px; font-weight: 800; color: var(--cream); letter-spacing: 2px; text-transform: uppercase; opacity: .9; }
+  .chain.big .n { color: #ffd6e8; }
+  .chain.huge .n { color: #ffe59a; font-size: 64px; }
+
+  /* invitation */
+  .invite {
+    position: fixed; left: 50%; top: calc(16% + var(--sat));
+    transform: translateX(-50%); z-index: 4; pointer-events: none;
+    text-align: center; color: var(--cream);
+    opacity: 0; transition: opacity .6s;
+    text-shadow: 0 2px 10px rgba(50,30,80,.5);
+  }
+  .invite.show { opacity: 1; }
+  .invite h1 { margin: 0; font-size: 34px; font-weight: 900; letter-spacing: .5px; line-height: 1.05; }
+  .invite h1 span { color: var(--butter); }
+  .invite p { margin: 8px 0 0; font-size: 17px; font-weight: 700; opacity: .92; white-space: nowrap; }
+  .invite p.hint { font-size: 14px; opacity: .8; margin-top: 4px; }
+
+  /* toast */
+  .toast {
+    position: fixed; left: 50%; top: calc(32% + var(--sat));
+    transform: translate(-50%, -10px); z-index: 5; pointer-events: none;
+    padding: 10px 16px; border-radius: 16px;
+    background: var(--card); color: var(--ink);
+    font-weight: 800; font-size: 15px; box-shadow: var(--shadow);
+    opacity: 0; transition: opacity .3s, transform .3s cubic-bezier(.2,1.4,.4,1);
+    max-width: min(86vw, 360px); text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Results ---------- */
+  .results {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center;
+    padding: calc(16px + var(--sat)) 16px calc(16px + var(--sab));
+    background: rgba(30,22,52,.0);
+    opacity: 0; pointer-events: none;
+    transition: opacity .35s, background .5s;
+  }
+  .results.show { opacity: 1; pointer-events: auto; background: rgba(30,22,52,.28); }
+  body.res .pill, body.res .chain, body.res .toast { opacity: 0 !important; }
+  .card {
+    width: min(100%, 380px);
+    max-height: calc(100vh - 32px - var(--sat) - var(--sab));
+    overflow-y: auto; overscroll-behavior: contain;
+    background: var(--card);
+    border-radius: 28px; padding: 22px 20px 18px;
+    box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,.7);
+    transform: translateY(24px) scale(.96);
+    transition: transform .45s cubic-bezier(.2,1.4,.4,1);
+    position: relative;
+  }
+  .results.show .card { transform: translateY(0) scale(1); }
+  .card::before {
+    content: ""; position: absolute; inset: 0; border-radius: 28px; pointer-events: none;
+    background: radial-gradient(120% 60% at 50% -10%, rgba(255,214,232,.55), transparent 60%),
+                radial-gradient(80% 40% at 100% 100%, rgba(201,184,239,.45), transparent 60%);
+  }
+  .card > * { position: relative; }
+  .card h2 { margin: 0; text-align: center; font-size: 15px; letter-spacing: 3px; text-transform: uppercase; color: var(--ink-soft); font-weight: 800; }
+  .card .title { text-align: center; font-size: 28px; font-weight: 900; margin: 2px 0 10px; line-height: 1.1; }
+  .card .title .moon { color: #b8872e; }
+  .badge {
+    display: none; margin: 0 auto 10px; width: max-content;
+    padding: 6px 14px; border-radius: 999px;
+    background: linear-gradient(90deg, #ffd36a, #ffb3c7); color: #5a3a1a;
+    font-weight: 900; font-size: 14px; letter-spacing: .5px;
+    animation: badgePop .6s cubic-bezier(.2,1.6,.4,1);
+  }
+  .badge.show { display: block; }
+  @keyframes badgePop { from { transform: scale(.5) rotate(-6deg); opacity: 0 } to { transform: none; opacity: 1 } }
+  .score-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 2px; }
+  .score-row .big { font-size: 56px; font-weight: 900; line-height: 1; letter-spacing: -1.5px; color: var(--ink); }
+  .score-row svg { width: 30px; height: 36px; }
+  .score-sub { text-align: center; font-size: 14px; color: var(--ink-soft); font-weight: 700; margin-bottom: 14px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat { background: rgba(255,255,255,.55); border-radius: 16px; padding: 10px 6px; text-align: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.8); }
+  .stat .v { font-size: 22px; font-weight: 900; line-height: 1.1; }
+  .stat .k { font-size: 11px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: var(--ink-soft); margin-top: 2px; }
+  .breakdown { font-size: 13px; color: var(--ink-soft); font-weight: 700; text-align: center; margin: -6px 0 12px; min-height: 16px; }
+  .goal { background: rgba(255,255,255,.55); border-radius: 16px; padding: 10px 12px; margin-bottom: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.8); }
+  .goal .g-t { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; }
+  .goal .g-t span:last-child { color: var(--ink-soft); }
+  .bar { height: 10px; border-radius: 999px; background: rgba(63,51,80,.12); margin-top: 7px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, #9fc39b, #ffe59a); transition: width .9s cubic-bezier(.2,.8,.2,1); }
+  .unlock { display: none; align-items: center; gap: 10px; background: linear-gradient(90deg, rgba(255,229,154,.6), rgba(246,184,198,.6)); border-radius: 16px; padding: 10px 12px; margin-bottom: 14px; font-weight: 800; font-size: 14px; }
+  .unlock.show { display: flex; }
+  .unlock canvas { width: 46px; height: 46px; flex: none; }
+  .btn-primary {
+    display: block; width: 100%; min-height: 58px;
+    border: 0; border-radius: 20px; cursor: pointer;
+    background: linear-gradient(180deg, #ffe59a, #f7c35c);
+    color: #4c3310; font-size: 21px; font-weight: 900; letter-spacing: .3px;
+    box-shadow: 0 8px 0 #d9a23e, 0 14px 24px rgba(120,80,20,.25);
+    transition: transform .12s, box-shadow .12s;
+    font-family: inherit;
+  }
+  .btn-primary:active { transform: translateY(5px); box-shadow: 0 3px 0 #d9a23e, 0 6px 12px rgba(120,80,20,.25); }
+  .btn-primary:focus-visible, .btn-ghost:focus-visible { outline: 3px solid #7fb4ff; outline-offset: 2px; }
+  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-ghost {
+    flex: 1; min-height: 46px; border-radius: 16px; border: 0; cursor: pointer;
+    background: rgba(63,51,80,.08); color: var(--ink); font-weight: 800; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-family: inherit;
+    transition: background .15s, transform .12s;
+  }
+  .btn-ghost:active { transform: scale(.97); background: rgba(63,51,80,.14); }
+  .btn-ghost svg { width: 18px; height: 18px; }
+  .btn-ghost.on { background: rgba(159,195,155,.4); box-shadow: inset 0 0 0 2px rgba(80,120,80,.35); }
+  .foot { text-align: center; font-size: 12px; color: var(--ink-soft); font-weight: 700; margin-top: 12px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-height: 640px) {
+    .invite h1 { font-size: 26px; } .invite p { font-size: 15px; white-space: nowrap; } .invite p.hint { font-size: 13px; }
+    .pill { min-height: 40px; font-size: 16px; padding: 6px 12px 6px 10px; } .icon-btn { width: 42px; height: 42px; }
+    .card { padding: 16px 16px 14px; border-radius: 22px; }
+    .score-row .big { font-size: 44px; }
+    .stats { margin-bottom: 10px; }
+    .card .title { font-size: 24px; margin-bottom: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pill, .chain, .toast, .card, .spark, .badge { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<canvas id="stage" tabindex="0" role="application" aria-label="Moss and Moon garden. Tap or press Enter on a glowing seed to bloom it."></canvas>
+
+<div class="hud">
+  <div class="pill" id="scorePill" aria-live="polite" aria-atomic="true" title="Moon-drops this round">
+    <svg class="drop" viewBox="0 0 18 22" aria-hidden="true"><path d="M9 1 C9 1 2 10 2 14 a7 7 0 0 0 14 0 C16 10 9 1 9 1Z" fill="#fff2c4" stroke="#f3c45c" stroke-width="1.2"/><circle cx="6.5" cy="13" r="1.6" fill="#fff"/></svg>
+    <span id="score">0</span>
+    <span class="label" id="scoreLabel">moon-drops</span>
+  </div>
+  <div class="hud-right">
+    <button class="icon-btn" id="muteBtn" aria-label="Mute sound" aria-pressed="false" title="Sound">
+      <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10H4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10v4h3l5 4V6L7 10H4z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6"/></svg>
+    </button>
+    <button class="icon-btn" id="restartBtn" aria-label="Start a new garden" title="New garden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="invite" id="invite" aria-hidden="true">
+  <h1>Moss <span>&amp;</span> Moon</h1>
+  <p>Wake the garden ✨</p>
+  <p class="hint">tap the glowing seed</p>
+</div>
+
+<div class="chain" id="chain" aria-hidden="true"><div class="n" id="chainN">×1</div><div class="t">chain</div></div>
+<div class="sparks" id="sparks" aria-label="Sparks remaining"><span class="lbl">Sparks</span></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div class="results" id="results" role="dialog" aria-modal="true" aria-labelledby="resTitle" aria-hidden="true">
+  <div class="card">
+    <h2 id="resKicker">The garden rests</h2>
+    <div class="title" id="resTitle">A <span class="moon">lovely</span> bloom</div>
+    <div class="badge" id="badge">✨ New personal best!</div>
+    <div class="score-row">
+      <svg viewBox="0 0 18 22" aria-hidden="true"><path d="M9 1 C9 1 2 10 2 14 a7 7 0 0 0 14 0 C16 10 9 1 9 1Z" fill="#ffe59a" stroke="#d9a23e" stroke-width="1.2"/><circle cx="6.5" cy="13" r="1.6" fill="#fff"/></svg>
+      <div class="big" id="resScore">0</div>
+    </div>
+    <div class="score-sub">moon-drops this round</div>
+    <div class="breakdown" id="breakdown"></div>
+    <div class="stats">
+      <div class="stat"><div class="v" id="resChain">0</div><div class="k">best chain</div></div>
+      <div class="stat"><div class="v" id="resBlooms">0</div><div class="k">blooms</div></div>
+      <div class="stat"><div class="v" id="resBest">0</div><div class="k">your best</div></div>
+    </div>
+    <div class="unlock" id="unlock"><canvas id="unlockCanvas" width="92" height="92" aria-hidden="true"></canvas><div id="unlockText">A new friend has arrived.</div></div>
+    <div class="goal">
+      <div class="g-t"><span id="goalName">Next: Moon Moth</span><span id="goalProg">0 / 150</span></div>
+      <div class="bar"><i id="goalBar"></i></div>
+    </div>
+    <button class="btn-primary" id="againBtn">Grow again 🌱</button>
+    <div class="btn-row">
+      <button class="btn-ghost" id="dailyBtn" aria-pressed="false" title="Everyone gets the same garden today">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 13A8 8 0 1 1 11 3a6.5 6.5 0 0 0 10 10z"/></svg>
+        <span id="dailyLbl">Today's garden</span>
+      </button>
+      <button class="btn-ghost" id="shareBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7"/></svg>
+        Share
+      </button>
+    </div>
+    <div class="foot" id="foot">Round 1 · Longer chains earn more per bloom</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   MOSS & MOON — a tiny watercolor garden you wake with a tap.
+   Sections: Core utils · Storage · Audio · Art (scenery) · Characters ·
+             Game (seeds, chains, scoring) · UI · Boot
+   ===================================================================== */
+
+// ----------------------------------------------------------------- Core utils
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = {
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  inCubic: t => t * t * t,
+  outBack: t => { const c = 1.70158; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
+  outElastic: t => t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (TAU / 3)) + 1,
+  inOut: t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+};
+const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+
+// Seedable RNG (mulberry32) so "Today's garden" is the same for everyone.
+function makeRng(seed) {
+  let a = seed >>> 0;
+  const r = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  r.range = (lo, hi) => lo + (hi - lo) * r();
+  r.int = (lo, hi) => Math.floor(r.range(lo, hi + 1));
+  r.pick = arr => arr[Math.floor(r() * arr.length)];
+  return r;
+}
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+const todayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ----------------------------------------------------------------- Storage (works without localStorage)
+const Store = (() => {
+  const KEY = 'mossmoon.v1';
+  let mem = null;
+  const defaults = () => ({ best: 0, bestChain: 0, drops: 0, rounds: 0, muted: false, unlocks: {}, daily: {}, seen: {} });
+  function load() {
+    if (mem) return mem;
+    mem = defaults();
+    try { const raw = localStorage.getItem(KEY); if (raw) Object.assign(mem, JSON.parse(raw)); } catch (e) { /* storage blocked: stay in memory */ }
+    return mem;
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(mem)); } catch (e) { /* ignore */ } }
+  return { get: load, save };
+})();
+
+// ----------------------------------------------------------------- Audio (procedural, Web Audio)
+const Audio = (() => {
+  let ctx = null, master = null, pad = null, started = false;
+  let muted = !!Store.get().muted;
+  // Pentatonic-ish scale (C major pentatonic + octaves) in Hz
+  const SCALE = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.7, 1318.5];
+  function ensure() {
+    if (ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
+    try {
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = muted ? 0 : 0.8; master.connect(ctx.destination);
+      // very soft "night air" pad: two detuned triangle waves through a lowpass
+      pad = ctx.createGain(); pad.gain.value = 0; pad.connect(master);
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420; lp.connect(pad);
+      [130.81, 196.0, 261.63 * 1.003].forEach((f, i) => { const o = ctx.createOscillator(); o.type = i === 2 ? 'sine' : 'triangle'; o.frequency.value = f; o.detune.value = (i - 1) * 4; const g = ctx.createGain(); g.gain.value = i === 2 ? .35 : .22; o.connect(g); g.connect(lp); o.start(); });
+      return true;
+    } catch (e) { ctx = null; return false; }
+  }
+  function unlock() { // must be called from a user gesture
+    if (!ensure()) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    if (!started) { started = true; pad.gain.setTargetAtTime(0.045, ctx.currentTime, 2.5); }
+  }
+  function now() { return ctx ? ctx.currentTime : 0; }
+  function tone(freq, { type = 'sine', dur = .6, vol = .3, attack = .005, delay = 0, detune = 0, bend = 0 } = {}) {
+    if (!ctx || muted) return;
+    const t0 = now() + delay;
+    const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t0); o.detune.value = detune;
+    if (bend) o.frequency.exponentialRampToValueAtTime(freq * bend, t0 + dur);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + attack); g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+    o.connect(g); g.connect(master); o.start(t0); o.stop(t0 + dur + .05);
+  }
+  function chime(freq, delay = 0, vol = .22, dur = .9) { // bell-like: fundamental + soft partials
+    tone(freq, { type: 'sine', dur, vol, delay });
+    tone(freq * 2, { type: 'sine', dur: dur * .55, vol: vol * .28, delay });
+    tone(freq * 3.01, { type: 'sine', dur: dur * .3, vol: vol * .09, delay });
+  }
+  function noise(dur = .25, vol = .08, delay = 0, hp = 1800) {
+    if (!ctx || muted) return;
+    const n = Math.floor(ctx.sampleRate * dur); const buf = ctx.createBuffer(1, n, ctx.sampleRate); const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = ctx.createBufferSource(); s.buffer = buf; const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = hp;
+    const g = ctx.createGain(); const t0 = now() + delay; g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0008, t0 + dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t0);
+  }
+  const api = {
+    unlock,
+    get muted() { return muted; },
+    setMuted(m) { muted = m; Store.get().muted = m; Store.save(); if (master) master.gain.setTargetAtTime(m ? 0 : .8, now(), .05); },
+    tap() { tone(220, { type: 'triangle', dur: .12, vol: .12, bend: 1.6 }); noise(.08, .05, 0, 3000); },      // seed squish
+    bloom(i) { const f = SCALE[clamp(i, 0, SCALE.length - 1)]; chime(f, 0, .2); noise(.18, .035, 0, 2500); }, // chain note climbs
+    drop(i) { tone(1760 + (i % 3) * 220, { dur: .18, vol: .05, delay: i * .02 }); },
+    miss() { tone(160, { type: 'triangle', dur: .18, vol: .07, bend: .8 }); },
+    moon() { // rich flourish: arpeggio + shimmer
+      [0, 2, 4, 6, 8, 10, 12].forEach((k, i) => chime(SCALE[k] * .5, i * .09, .22, 1.8));
+      [12, 10, 12, 11, 12].forEach((k, i) => chime(SCALE[k], .7 + i * .11, .1, 1.2));
+      tone(65.4, { type: 'sine', dur: 2.6, vol: .25, attack: .3 });
+    },
+    creature() { chime(880, 0, .18, .7); chime(1174.7, .12, .18, .7); chime(1568, .24, .2, 1.1); },
+    milestone() { [0, 4, 7, 12].forEach((k, i) => chime(SCALE[k] * 2, i * .07, .16, 1)); },
+    best() { [4, 6, 8, 11, 12].forEach((k, i) => chime(SCALE[k], i * .1, .2, 1.4)); tone(130.8, { type: 'sine', dur: 2, vol: .18, attack: .2 }); },
+    full() { [0, 4, 7, 9, 12].forEach((k, i) => { chime(SCALE[k], i * .08, .18, 1.6); chime(SCALE[k] * 2, i * .08 + .4, .08, 1); }); },
+    whoosh() { noise(.5, .06, 0, 600); },
+  };
+  return api;
+})();
+
+// ----------------------------------------------------------------- Canvas + scenery
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d', { alpha: false });
+let W = 0, H = 0, DPR = 1;
+const Scene = { bg: null, grain: null, hills: [], grass: [], pollen: [], fireflies: [], stars: [], horizon: 0, pond: null, cottage: null, ripples: [] };
+
+function makeGrain() {
+  const c = document.createElement('canvas'); c.width = c.height = 160; const g = c.getContext('2d');
+  const img = g.createImageData(160, 160); const d = img.data;
+  for (let i = 0; i < d.length; i += 4) { const v = 200 + Math.random() * 55; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+  g.putImageData(img, 0, 0); return c;
+}
+
+// Organic, slightly wobbly closed/open path through points
+function wobbly(g, pts, jitter, closed, seed) {
+  const r = makeRng(seed || 7);
+  g.beginPath();
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i], jx = (r() - .5) * jitter, jy = (r() - .5) * jitter;
+    if (i === 0) g.moveTo(p[0] + jx, p[1] + jy);
+    else { const q = pts[i - 1]; const mx = (q[0] + p[0]) / 2 + (r() - .5) * jitter, my = (q[1] + p[1]) / 2 + (r() - .5) * jitter; g.quadraticCurveTo(mx, my, p[0] + jx, p[1] + jy); }
+  }
+  if (closed) g.closePath();
+}
+// Watercolor wash: several offset translucent layers + a darker bleed edge
+function wash(g, pathFn, color, edge, layers = 3, spread = 3) {
+  for (let i = 0; i < layers; i++) {
+    g.save(); g.translate((i % 2 ? 1 : -1) * spread * (i * .5 + .5), (i < 2 ? 1 : -1) * spread * .6 * i);
+    g.globalAlpha = 0.45 / layers + .28; g.fillStyle = color; pathFn(g, i); g.fill(); g.restore();
+  }
+  if (edge) { g.save(); g.globalAlpha = .35; g.lineWidth = 1.6; g.strokeStyle = edge; pathFn(g, 0); g.stroke(); g.restore(); }
+}
+
+function hillPoints(y0, amp, freq, phase, n = 14) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) { const x = (i / n) * W; pts.push([x, y0 + Math.sin(i * freq + phase) * amp + Math.cos(i * freq * 2.3 + phase) * amp * .35]); }
+  pts.push([W + 20, H + 20], [-20, H + 20]);
+  return pts;
+}
+
+function resize() {
+  const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight);
+  W = vw; H = vh;
+  const area = vw * vh;
+  DPR = Math.min(window.devicePixelRatio || 1, area > 900000 ? 1.5 : 2);
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  buildScene();
+  if (typeof Game !== 'undefined' && Game.seeds) Game.relayout();
+}
+
+function buildScene() {
+  if (!Scene.grain) Scene.grain = makeGrain();
+  const landscape = W > H * 1.1;
+  Scene.horizon = H * (landscape ? 0.24 : 0.30);
+  const bg = document.createElement('canvas'); bg.width = Math.round(W * DPR); bg.height = Math.round(H * DPR);
+  const g = bg.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const r = makeRng(1234);
+
+  // Sky: dusk wash — lavender → pink → butter at the horizon
+  const sky = g.createLinearGradient(0, 0, 0, Scene.horizon * 1.25);
+  sky.addColorStop(0, '#5d5a9c'); sky.addColorStop(.35, '#9a86c9'); sky.addColorStop(.68, '#e6a9c3'); sky.addColorStop(.92, '#ffd9a6'); sky.addColorStop(1, '#fff0c4');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  // soft clouds
+  for (let i = 0; i < 4; i++) {
+    const cx = r() * W, cy = Scene.horizon * (0.3 + r() * .55), cw = W * (0.22 + r() * .25), ch = cw * .16;
+    g.save(); g.globalAlpha = .16 + r() * .1; g.fillStyle = '#fff5ea'; g.filter = 'blur(6px)';
+    g.beginPath(); g.ellipse(cx, cy, cw * .5, ch * .5, 0, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(cx - cw * .2, cy - ch * .25, cw * .28, ch * .5, 0, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(cx + cw * .18, cy - ch * .15, cw * .22, ch * .45, 0, 0, TAU); g.fill();
+    g.restore();
+  }
+  // Stars (static positions; twinkle drawn live)
+  Scene.stars = [];
+  for (let i = 0; i < 70; i++) Scene.stars.push({ x: r() * W, y: r() * Scene.horizon * .75, s: .6 + r() * 1.4, p: r() * TAU });
+  // Moon
+  const mx = W * 0.22, my = Scene.horizon * 0.46, mr = Math.min(W, H) * 0.075;
+  Scene.moon = { x: mx, y: my, r: mr };
+  const halo = g.createRadialGradient(mx, my, mr * .6, mx, my, mr * 4); halo.addColorStop(0, 'rgba(255,240,200,.55)'); halo.addColorStop(.4, 'rgba(255,230,190,.18)'); halo.addColorStop(1, 'rgba(255,230,190,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, W, H);
+  g.save(); g.fillStyle = '#fff6d6'; g.shadowColor = 'rgba(255,240,200,.9)'; g.shadowBlur = 24; g.beginPath(); g.arc(mx, my, mr, 0, TAU); g.fill(); g.restore();
+  g.save(); g.globalAlpha = .22; g.fillStyle = '#e8d3a8'; [[-.3, -.2, .22], [.25, .1, .16], [-.05, .4, .12], [.4, -.4, .1]].forEach(([a, b, c]) => { g.beginPath(); g.arc(mx + a * mr, my + b * mr, c * mr, 0, TAU); g.fill(); }); g.restore();
+
+  // Far hills (lavender-blue, misty)
+  const farY = Scene.horizon;
+  wash(g, (c, i) => wobbly(c, hillPoints(farY + 4, H * .035, 1.9, 1.2, 10), 2, true, 11 + i), '#b7a8dc', null, 3, 2);
+  g.save(); const mist = g.createLinearGradient(0, farY - 10, 0, farY + H * .08); mist.addColorStop(0, 'rgba(255,225,215,.0)'); mist.addColorStop(1, 'rgba(255,225,215,.55)'); g.fillStyle = mist; g.fillRect(0, farY - 10, W, H * .09); g.restore();
+  wash(g, (c, i) => wobbly(c, hillPoints(farY + H * .05, H * .03, 2.6, 4.1, 10), 2, true, 21 + i), '#9fa0cf', null, 3, 2);
+  // tiny far trees
+  g.save(); g.fillStyle = 'rgba(110,105,170,.55)';
+  for (let i = 0; i < 26; i++) { const x = r() * W, y = farY + H * .05 + Math.sin(x / W * 2.6 * 10 / W * W + 4.1) * 0; const h = 6 + r() * 10; g.beginPath(); g.moveTo(x - h * .35, y + 6); g.lineTo(x, y - h); g.lineTo(x + h * .35, y + 6); g.closePath(); g.fill(); }
+  g.restore();
+
+  // Mid hill (sage) with cottage
+  const midY = farY + H * (landscape ? .05 : .06);
+  wash(g, (c, i) => wobbly(c, hillPoints(midY, H * .028, 1.4, 2.2, 12), 3, true, 31 + i), '#8db98f', '#5f8a63', 3, 3);
+  drawCottage(g, W * 0.80, midY + H * .012, Math.min(W, H) * 0.11);
+  drawTree(g, W * 0.13, midY - H * .005, Math.min(W, H) * .11, r);
+  drawTree(g, W * 0.93, midY + H * .02, Math.min(W, H) * .07, r);
+
+  // Main meadow (the play field): warm mossy green with a lighter path of light under the moon
+  const meadowY = midY + H * (landscape ? .04 : .045);
+  wash(g, (c, i) => wobbly(c, hillPoints(meadowY, H * .02, 1.1, .6, 12), 4, true, 41 + i), '#a9cc93', '#6f9a66', 4, 3);
+  const glow = g.createRadialGradient(W * .5, H * .66, 10, W * .5, H * .66, W * .75); glow.addColorStop(0, 'rgba(255,245,200,.22)'); glow.addColorStop(1, 'rgba(255,245,200,0)');
+  g.fillStyle = glow; g.fillRect(0, meadowY - 20, W, H);
+  // mossy texture: dapples
+  g.save();
+  for (let i = 0; i < 160; i++) { const x = r() * W, y = meadowY + r() * (H - meadowY); const rr = 4 + r() * 14; g.globalAlpha = .07 + r() * .09; g.fillStyle = r() < .5 ? '#7fae73' : '#d6e6a8'; g.beginPath(); g.ellipse(x, y, rr * 1.4, rr * .6, r() * 3, 0, TAU); g.fill(); }
+  g.restore();
+  // Pond (bottom-left)
+  Scene.pond = { x: landscape ? W * .12 : W * 0.2, y: H * 0.905, rx: Math.min(W, H * .6) * 0.17, ry: H * 0.035 };
+  const p = Scene.pond;
+  wash(g, (c) => { c.beginPath(); c.ellipse(p.x, p.y, p.rx, p.ry, 0, 0, TAU); }, '#8fc5e8', '#6aa4cc', 3, 2);
+  g.save(); g.globalAlpha = .5; const pg = g.createLinearGradient(0, p.y - p.ry, 0, p.y + p.ry); pg.addColorStop(0, '#c7e6f7'); pg.addColorStop(1, '#7fb6dc'); g.fillStyle = pg; g.beginPath(); g.ellipse(p.x, p.y, p.rx * .92, p.ry * .85, 0, 0, TAU); g.fill(); g.restore();
+  // stones + mushrooms + flowers scattered (decor)
+  for (let i = 0; i < 9; i++) { const x = r() * W, y = meadowY + H * .02 + r() * (H - meadowY - H * .1); if (dist(x, y, p.x, p.y) < p.rx * 1.3) continue; drawStone(g, x, y, 5 + r() * 9, r); }
+  for (let i = 0; i < 7; i++) { const x = r() * W, y = meadowY + H * .03 + r() * (H - meadowY - H * .12); if (dist(x, y, p.x, p.y) < p.rx * 1.3) continue; drawMushroom(g, x, y, 6 + r() * 7, r); }
+  // foreground grass tufts (static layer), plus a living set for sway
+  Scene.grass = [];
+  for (let i = 0; i < 230; i++) { const x = r() * W, y = meadowY + r() * (H - meadowY); if (dist(x, y, p.x, p.y) < p.rx * 1.05) continue; Scene.grass.push({ x, y, h: 6 + r() * 9 + (y / H) * 10, w: 1.2 + r() * 1.4, ph: r() * TAU, lean: (r() - .5) * 8, c: r() < .4 ? 'rgba(104,152,92,.75)' : r() < .7 ? 'rgba(143,185,122,.8)' : 'rgba(186,214,140,.75)' }); }
+  // Paper grain overlay
+  g.save(); g.globalAlpha = .13; g.globalCompositeOperation = 'multiply'; const pat = g.createPattern(Scene.grain, 'repeat'); g.fillStyle = pat; g.fillRect(0, 0, W, H); g.restore();
+  // vignette
+  g.save(); const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .45, W / 2, H / 2, Math.max(W, H) * .8); vg.addColorStop(0, 'rgba(60,40,90,0)'); vg.addColorStop(1, 'rgba(60,40,90,.32)'); g.fillStyle = vg; g.fillRect(0, 0, W, H); g.restore();
+
+  Scene.bg = bg; Scene.meadowY = meadowY; Scene.midY = midY;
+  Scene.pollen = []; for (let i = 0; i < (REDUCED ? 14 : 36); i++) Scene.pollen.push({ x: Math.random() * W, y: Math.random() * H, s: .8 + Math.random() * 1.8, ph: Math.random() * TAU, v: 6 + Math.random() * 10 });
+  Scene.fireflies = []; for (let i = 0; i < (REDUCED ? 6 : 14); i++) Scene.fireflies.push({ x: Math.random() * W, y: meadowY - 40 + Math.random() * (H - meadowY), ph: Math.random() * TAU, a: Math.random() * TAU, sp: 8 + Math.random() * 14 });
+}
+
+function drawCottage(g, x, y, s) {
+  const r = makeRng(99);
+  // walls
+  wash(g, (c) => wobbly(c, [[x - s * .5, y], [x - s * .5, y - s * .55], [x + s * .5, y - s * .55], [x + s * .5, y]], 2, true, 5), '#f4e3c9', '#b99b7a', 3, 1.5);
+  // roof (soft mossy pink)
+  wash(g, (c) => wobbly(c, [[x - s * .62, y - s * .52], [x, y - s * 1.0], [x + s * .62, y - s * .52]], 2, true, 6), '#d79aa4', '#9e5f6e', 3, 1.5);
+  g.save(); g.fillStyle = 'rgba(140,180,120,.55)'; g.beginPath(); g.ellipse(x - s * .2, y - s * .75, s * .18, s * .07, -.5, 0, TAU); g.fill(); g.restore();
+  // chimney
+  g.fillStyle = '#c9a98f'; g.fillRect(x + s * .25, y - s * .95, s * .12, s * .28);
+  // door + windows (window glow drawn live when unlocked)
+  g.fillStyle = '#8b6a4f'; g.beginPath(); g.roundRect ? g.roundRect(x - s * .1, y - s * .3, s * .2, s * .3, s * .08) : g.rect(x - s * .1, y - s * .3, s * .2, s * .3); g.fill();
+  Scene.cottage = { x, y, s, windows: [[x - s * .33, y - s * .38], [x + s * .33, y - s * .38]] };
+  g.fillStyle = '#6f5d8f'; Scene.cottage.windows.forEach(([wx, wy]) => { g.fillRect(wx - s * .07, wy - s * .07, s * .14, s * .14); });
+  g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; Scene.cottage.windows.forEach(([wx, wy]) => { g.beginPath(); g.moveTo(wx, wy - s * .07); g.lineTo(wx, wy + s * .07); g.moveTo(wx - s * .07, wy); g.lineTo(wx + s * .07, wy); g.stroke(); });
+  // bush beside
+  wash(g, (c) => { c.beginPath(); c.ellipse(x + s * .62, y - s * .06, s * .24, s * .16, 0, 0, TAU); }, '#7fae73', '#5a8a55', 2, 1.5);
+}
+function drawTree(g, x, y, s, r) {
+  g.fillStyle = '#8a6a55'; g.beginPath(); g.moveTo(x - s * .07, y); g.lineTo(x - s * .04, y - s * .45); g.lineTo(x + s * .04, y - s * .45); g.lineTo(x + s * .07, y); g.closePath(); g.fill();
+  const cols = ['#f4b6c7', '#f7c6d2', '#e9a2b8'];
+  for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, rr = s * (.28 + r() * .14); const cx = x + Math.cos(a) * s * .22, cy = y - s * .6 + Math.sin(a) * s * .17; wash(g, (c) => { c.beginPath(); c.ellipse(cx, cy, rr, rr * .8, 0, 0, TAU); }, r.pick(cols), null, 2, 1.5); }
+  wash(g, (c) => { c.beginPath(); c.ellipse(x, y - s * .62, s * .3, s * .24, 0, 0, TAU); }, '#fbd0dc', '#c98aa1', 2, 1);
+}
+function drawStone(g, x, y, s, r) { wash(g, (c) => { c.beginPath(); c.ellipse(x, y, s, s * .62, (r() - .5) * .6, 0, 0, TAU); }, '#b9b4c6', '#8b84a0', 2, 1); g.save(); g.globalAlpha = .4; g.fillStyle = '#9ec98c'; g.beginPath(); g.ellipse(x - s * .3, y - s * .3, s * .45, s * .22, 0, 0, TAU); g.fill(); g.restore(); }
+function drawMushroom(g, x, y, s, r) {
+  g.fillStyle = '#f7ecd8'; g.beginPath(); g.roundRect ? g.roundRect(x - s * .22, y - s * .5, s * .44, s * .55, s * .15) : g.rect(x - s * .22, y - s * .5, s * .44, s * .55); g.fill();
+  wash(g, (c) => { c.beginPath(); c.ellipse(x, y - s * .5, s * .62, s * .38, 0, Math.PI, TAU); c.closePath(); }, r() < .5 ? '#f08a8a' : '#f2b16b', '#b85a5a', 2, 1);
+  g.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(x + (r() - .5) * s * .8, y - s * .6 - r() * s * .18, s * .07 + r() * s * .05, 0, TAU); g.fill(); }
+}
+
+// ---- live scenery layers (called every frame) ----
+function drawSkyLife(t) {
+  ctx.save();
+  for (const s of Scene.stars) { const a = .35 + .65 * (0.5 + 0.5 * Math.sin(t * 1.6 + s.p)); ctx.globalAlpha = a * .9; ctx.fillStyle = '#fff8e6'; ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, TAU); ctx.fill(); }
+  ctx.restore();
+  // cottage windows glow when unlocked; chimney smoke always
+  const c = Scene.cottage;
+  if (c) {
+    if (Store.get().unlocks.cottage) { ctx.save(); const pulse = .75 + .25 * Math.sin(t * 2.2); ctx.fillStyle = `rgba(255,214,120,${0.85 * pulse})`; ctx.shadowColor = 'rgba(255,200,100,.9)'; ctx.shadowBlur = 14; c.windows.forEach(([wx, wy]) => ctx.fillRect(wx - c.s * .07, wy - c.s * .07, c.s * .14, c.s * .14)); ctx.restore(); }
+    if (!REDUCED) { ctx.save(); ctx.fillStyle = 'rgba(255,250,240,.35)'; for (let i = 0; i < 4; i++) { const k = (t * .35 + i * .25) % 1; ctx.globalAlpha = (1 - k) * .4; ctx.beginPath(); ctx.arc(c.x + c.s * .31 + Math.sin(k * 6 + i) * c.s * .06, c.y - c.s * .98 - k * c.s * .5, c.s * (.04 + k * .09), 0, TAU); ctx.fill(); } ctx.restore(); }
+  }
+}
+function drawWater(t) {
+  const p = Scene.pond; if (!p) return;
+  ctx.save(); ctx.beginPath(); ctx.ellipse(p.x, p.y, p.rx * .92, p.ry * .85, 0, 0, TAU); ctx.clip();
+  // moon reflection + moving highlights
+  ctx.globalAlpha = .35; ctx.fillStyle = '#fff4d0'; ctx.beginPath(); ctx.ellipse(p.x + p.rx * .25, p.y - p.ry * .1 + Math.sin(t * 1.3) * 1.5, p.rx * .14, p.ry * .3, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.2;
+  for (let i = 0; i < 4; i++) { const k = ((t * .25 + i * .25) % 1); ctx.globalAlpha = (1 - k) * .5; ctx.beginPath(); ctx.ellipse(p.x - p.rx * .2 + i * p.rx * .15, p.y + p.ry * .1, p.rx * (.15 + k * .6), p.ry * (.12 + k * .55), 0, 0, TAU); ctx.stroke(); }
+  for (const rp of Scene.ripples) { const k = rp.t; ctx.globalAlpha = (1 - k) * .7; ctx.beginPath(); ctx.ellipse(rp.x, rp.y, 4 + k * p.rx * .8, 2 + k * p.ry * .8, 0, 0, TAU); ctx.stroke(); }
+  ctx.restore();
+}
+function drawGrass(t, pulses) {
+  const windBase = REDUCED ? 0 : Math.sin(t * .9) * .5 + Math.sin(t * 2.3) * .25;
+  ctx.save(); ctx.lineCap = 'round';
+  for (const b of Scene.grass) {
+    let sway = windBase * 2.2 + (REDUCED ? 0 : Math.sin(t * 1.7 + b.ph) * 1.6);
+    // bloom pulses push grass outward
+    for (const p of pulses) { const d = dist(b.x, b.y, p.x, p.y); const edge = p.r - d; if (edge > -40 && edge < 30) sway += ((b.x - p.x) / (d + 1)) * 9 * (1 - p.t); }
+    ctx.strokeStyle = b.c; ctx.lineWidth = b.w;
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.quadraticCurveTo(b.x + b.lean * .3 + sway * .4, b.y - b.h * .6, b.x + b.lean + sway, b.y - b.h); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawAir(t, dt) {
+  ctx.save();
+  for (const p of Scene.pollen) {
+    p.x += (Math.sin(t * .7 + p.ph) * 8 + 4) * dt; p.y -= p.v * dt * .35; p.y += Math.sin(t * 1.1 + p.ph) * 4 * dt;
+    if (p.y < -10) { p.y = H + 10; p.x = Math.random() * W; } if (p.x > W + 10) p.x = -10;
+    ctx.globalAlpha = .25 + .35 * (0.5 + 0.5 * Math.sin(t * 2 + p.ph)); ctx.fillStyle = '#fff6d8'; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, TAU); ctx.fill();
+  }
+  for (const f of Scene.fireflies) {
+    f.a += (Math.sin(t * .8 + f.ph) * .9) * dt; f.x += Math.cos(f.a) * f.sp * dt; f.y += Math.sin(f.a) * f.sp * .5 * dt;
+    if (f.x < -10) f.x = W + 10; if (f.x > W + 10) f.x = -10; if (f.y < Scene.meadowY - 60) f.y = Scene.meadowY - 60; if (f.y > H) f.y = Scene.meadowY;
+    const a = Math.max(0, Math.sin(t * 2.4 + f.ph * 3)); if (a < .05) continue;
+    ctx.globalAlpha = a * .9; ctx.fillStyle = '#eaffb0'; ctx.shadowColor = '#d6ff7a'; ctx.shadowBlur = 10; ctx.beginPath(); ctx.arc(f.x, f.y, 1.8, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+  }
+  ctx.restore();
+}
+
+// ----------------------------------------------------------------- Characters (one reusable renderer per creature)
+// Shared facial vocabulary so every creature belongs to the same world.
+function eyes(g, x, y, s, gap, mood, blink, lookX = 0, lookY = 0) {
+  // s: eye radius. mood: sleep | awake | happy | wow
+  const ex = [x - gap, x + gap];
+  if (mood === 'sleep') {
+    g.strokeStyle = '#3f3350'; g.lineWidth = Math.max(1.4, s * .28); g.lineCap = 'round';
+    ex.forEach(cx => { g.beginPath(); g.arc(cx, y - s * .1, s * .9, Math.PI * .15, Math.PI * .85); g.stroke(); });
+    return;
+  }
+  if (mood === 'happy') { // closed, upward arcs
+    g.strokeStyle = '#3f3350'; g.lineWidth = Math.max(1.4, s * .3); g.lineCap = 'round';
+    ex.forEach(cx => { g.beginPath(); g.arc(cx, y + s * .35, s * .9, Math.PI * 1.15, Math.PI * 1.85); g.stroke(); });
+    return;
+  }
+  const open = blink; // 0..1
+  ex.forEach((cx, i) => {
+    g.fillStyle = '#fff'; g.beginPath(); g.ellipse(cx, y, s * 1.05, s * 1.15 * open + .2, 0, 0, TAU); g.fill();
+    if (open > .25) {
+      const px = cx + lookX * s * .3, py = y + s * .05 + lookY * s * .3;
+      g.fillStyle = '#3f3350'; g.beginPath(); g.ellipse(px, py, s * .72, s * .85 * open, 0, 0, TAU); g.fill();
+      if (mood === 'wow') { g.fillStyle = '#fff'; star(g, px, py, s * .42, 5); g.fill(); }
+      g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(px - s * .25, py - s * .32, s * .26, 0, TAU); g.fill();
+      g.beginPath(); g.arc(px + s * .22, py + s * .25, s * .12, 0, TAU); g.fill();
+    }
+  });
+}
+function star(g, x, y, r, n) { g.beginPath(); for (let i = 0; i < n * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / n, rr = i % 2 ? r * .45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); }
+function blush(g, x, y, s, gap) { g.fillStyle = 'rgba(246,150,170,.45)'; [x - gap, x + gap].forEach(cx => { g.beginPath(); g.ellipse(cx, y, s * .9, s * .5, 0, 0, TAU); g.fill(); }); }
+function outline(g, color = 'rgba(70,55,80,.55)', w = 1.6) { g.strokeStyle = color; g.lineWidth = w; g.lineJoin = 'round'; g.stroke(); }
+
+const Chars = {
+  // MOCHI MOSSLING — round moss bun, leaf sprout, forever sleepy.
+  mochi(g, x, y, s, st, t) {
+    const breathe = 1 + Math.sin(t * 2.1) * .022;
+    const sq = st.squash || 0; // -1..1 squash/stretch
+    g.save(); g.translate(x, y + (st.hop || 0)); g.scale((1 + sq * .18) * breathe, (1 - sq * .18) / breathe);
+    // shadow
+    g.fillStyle = 'rgba(60,70,40,.18)'; g.beginPath(); g.ellipse(0, s * .95, s * 1.05, s * .22, 0, 0, TAU); g.fill();
+    // body
+    g.beginPath(); g.ellipse(0, 0, s, s * .92, 0, 0, TAU);
+    g.fillStyle = '#a3c88c'; g.fill(); outline(g, 'rgba(70,100,60,.6)', 1.8);
+    // moss tufts
+    g.fillStyle = '#8fb973'; [[-.75, -.45, .28], [.7, -.5, .26], [-.3, -.85, .22], [.35, -.86, .2]].forEach(([a, b, c]) => { g.beginPath(); g.arc(a * s, b * s, c * s, 0, TAU); g.fill(); });
+    // belly
+    g.fillStyle = '#d9e9b4'; g.beginPath(); g.ellipse(0, s * .35, s * .55, s * .42, 0, 0, TAU); g.fill();
+    // leaf sprout
+    g.save(); g.translate(0, -s * .9); g.rotate(Math.sin(t * 1.6) * .12 + (st.wiggle || 0));
+    g.strokeStyle = '#5f8f4e'; g.lineWidth = 2; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(s * .05, -s * .25, s * .1, -s * .45); g.stroke();
+    g.fillStyle = '#8ed07a'; g.beginPath(); g.moveTo(s * .1, -s * .45); g.quadraticCurveTo(s * .55, -s * .75, s * .5, -s * .35); g.quadraticCurveTo(s * .3, -s * .3, s * .1, -s * .45); g.fill(); outline(g, 'rgba(60,100,50,.5)', 1.2);
+    g.restore();
+    // face
+    eyes(g, 0, -s * .1, s * .2, s * .34, st.mood, st.blink, st.lookX || 0, st.lookY || 0);
+    blush(g, 0, s * .12, s * .2, s * .55);
+    g.strokeStyle = '#3f3350'; g.lineWidth = 1.5; g.lineCap = 'round'; g.beginPath();
+    if (st.mood === 'sleep') { g.arc(0, s * .2, s * .07, 0, TAU); } // tiny "o"
+    else if (st.mood === 'wow') { g.ellipse(0, s * .25, s * .09, s * .13, 0, 0, TAU); }
+    else { g.arc(0, s * .12, s * .16, Math.PI * .15, Math.PI * .85); }
+    g.stroke();
+    g.restore();
+    // zzz when asleep
+    if (st.mood === 'sleep') { g.save(); g.fillStyle = 'rgba(255,250,230,.9)'; g.font = `700 ${Math.round(s * .42)}px sans-serif`; g.textAlign = 'center'; for (let i = 0; i < 2; i++) { const k = ((t * .5 + i * .5) % 1); g.globalAlpha = (1 - k) * .9; g.fillText('z', x + s * .9 + k * s * .5 + i * s * .2, y - s * .8 - k * s * 1.1); } g.restore(); }
+  },
+  // PIP — cream fluff with long ears, peeks from behind the moonflower.
+  pip(g, x, y, s, st, t) {
+    g.save(); g.translate(x, y);
+    const tilt = Math.sin(t * 1.3) * .06 + (st.tilt || 0); g.rotate(tilt);
+    // ears
+    [[-1, -.35], [1, -.1]].forEach(([d, extra]) => {
+      g.save(); g.translate(d * s * .42, -s * .8); g.rotate(d * .35 + Math.sin(t * 2 + d) * .08 + (st.earWave ? Math.sin(t * 9) * .3 : 0) * (d > 0 ? 1 : 0));
+      g.beginPath(); g.ellipse(0, -s * .55, s * .22, s * .62, 0, 0, TAU); g.fillStyle = '#fbefe1'; g.fill(); outline(g, 'rgba(120,90,90,.55)', 1.6);
+      g.fillStyle = '#f7bfcb'; g.beginPath(); g.ellipse(0, -s * .52, s * .11, s * .42, 0, 0, TAU); g.fill();
+      g.restore();
+    });
+    // head/body blob
+    g.beginPath(); g.ellipse(0, 0, s * .95, s * .88, 0, 0, TAU); g.fillStyle = '#fbefe1'; g.fill(); outline(g, 'rgba(120,90,90,.55)', 1.8);
+    // fluff
+    g.fillStyle = '#fff8ef'; [[-.6, .4], [0, .55], [.6, .4]].forEach(([a, b]) => { g.beginPath(); g.arc(a * s, b * s, s * .3, 0, TAU); g.fill(); });
+    eyes(g, 0, -s * .05, s * .22, s * .36, st.mood, st.blink, st.lookX || 0, st.lookY || 0);
+    blush(g, 0, s * .22, s * .2, s * .56);
+    // nose + mouth
+    g.fillStyle = '#e39aa8'; g.beginPath(); g.ellipse(0, s * .22, s * .08, s * .06, 0, 0, TAU); g.fill();
+    g.strokeStyle = '#3f3350'; g.lineWidth = 1.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(-s * .12, s * .34); g.quadraticCurveTo(0, s * .44, s * .12, s * .34); g.stroke();
+    g.restore();
+  },
+  // MOON MOTH — glowing, translucent watercolor wings.
+  moth(g, x, y, s, st, t) {
+    const flap = REDUCED ? .8 : Math.abs(Math.sin(t * 11)) * .7 + .3;
+    g.save(); g.translate(x, y); g.rotate(st.rot || 0);
+    g.shadowColor = 'rgba(220,200,255,.9)'; g.shadowBlur = 16;
+    [[-1], [1]].forEach(([d]) => {
+      g.save(); g.scale(d * flap, 1);
+      const wg = g.createRadialGradient(s * .5, 0, 0, s * .5, 0, s * 1.1); wg.addColorStop(0, 'rgba(255,248,220,.95)'); wg.addColorStop(.5, 'rgba(214,190,250,.8)'); wg.addColorStop(1, 'rgba(170,150,230,.35)');
+      g.fillStyle = wg;
+      g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(s * 1.3, -s * 1.1, s * 1.05, -s * .1); g.quadraticCurveTo(s * .9, s * .35, 0, s * .15); g.fill();
+      g.beginPath(); g.moveTo(0, s * .1); g.quadraticCurveTo(s * .95, s * .4, s * .55, s * .85); g.quadraticCurveTo(s * .2, s * .8, 0, s * .3); g.fill();
+      g.strokeStyle = 'rgba(120,90,170,.45)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(s * 1.3, -s * 1.1, s * 1.05, -s * .1); g.quadraticCurveTo(s * .9, s * .35, 0, s * .15); g.stroke();
+      g.fillStyle = 'rgba(255,230,150,.9)'; g.beginPath(); g.arc(s * .6, -s * .25, s * .13, 0, TAU); g.fill();
+      g.restore();
+    });
+    g.shadowBlur = 0;
+    // body
+    g.fillStyle = '#f3e6c8'; g.beginPath(); g.ellipse(0, s * .1, s * .14, s * .42, 0, 0, TAU); g.fill(); outline(g, 'rgba(120,90,120,.5)', 1);
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(0, -s * .25, s * .17, 0, TAU); g.fill(); outline(g, 'rgba(120,90,120,.5)', 1);
+    eyes(g, 0, -s * .26, s * .07, s * .08, 'awake', st.blink);
+    g.strokeStyle = '#8f7aa8'; g.lineWidth = 1; [[-1], [1]].forEach(([d]) => { g.beginPath(); g.moveTo(d * s * .06, -s * .4); g.quadraticCurveTo(d * s * .25, -s * .75, d * s * .45, -s * .7); g.stroke(); });
+    g.restore();
+  },
+};
+
+// ----------------------------------------------------------------- Flowers & seeds
+const PALETTES = [
+  { p: '#f7b9c9', p2: '#fde3ea', c: '#ffe59a' },  // pink
+  { p: '#c9b8ef', p2: '#e8dfff', c: '#fff2c4' },  // lavender
+  { p: '#ffe59a', p2: '#fff6d2', c: '#f5a35c' },  // butter
+  { p: '#a9d4f0', p2: '#dcf0fb', c: '#fff2c4' },  // sky
+  { p: '#ffd0a8', p2: '#ffe8d3', c: '#f28ca0' },  // peach
+];
+function drawSeed(g, s, t, focus) {
+  // sleeping seed: a small glowing bulb in a leaf cup, pulsing to invite a tap
+  const pulse = REDUCED ? .5 : 0.5 + 0.5 * Math.sin(t * 2.6 + s.ph);
+  const dim = Game.anyHint && !s.hint && s.type === 'seed';
+  const r = s.r * ((dim ? .6 : .72) + (s.hint ? .08 * pulse : 0));
+  g.save(); g.translate(s.x, s.y);
+  g.fillStyle = 'rgba(40,60,30,.16)'; g.beginPath(); g.ellipse(0, r * .55, r * 1.1, r * .3, 0, 0, TAU); g.fill();
+  // glow (stronger for hinted / moon seeds)
+  const glowA = (s.type === 'moon' ? .55 : s.hint ? .62 : dim ? .1 : .3) * (0.65 + .35 * pulse);
+  if (s.hint) { g.strokeStyle = `rgba(255,250,220,${.35 + .45 * pulse})`; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, r * (1.9 + pulse * .5), 0, TAU); g.stroke(); }
+  if (dim) g.globalAlpha = .8;
+  const gr = g.createRadialGradient(0, 0, r * .3, 0, 0, r * (s.type === 'moon' ? 3.2 : 2.3));
+  gr.addColorStop(0, `rgba(255,240,180,${glowA})`); gr.addColorStop(1, 'rgba(255,240,180,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r * 3.2, 0, TAU); g.fill();
+  if (focus) { g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 2.5; g.setLineDash([4, 4]); g.beginPath(); g.arc(0, 0, r * 1.9, 0, TAU); g.stroke(); g.setLineDash([]); }
+  // leaf cup
+  g.fillStyle = '#7fae73'; [[-1], [1]].forEach(([d]) => { g.beginPath(); g.moveTo(0, r * .5); g.quadraticCurveTo(d * r * 1.3, r * .2, d * r * .9, -r * .5); g.quadraticCurveTo(d * r * .5, -r * .1, 0, r * .5); g.fill(); });
+  // bulb
+  const sc = 1 + (s.pressT > 0 ? -0.18 * Math.sin(Math.min(1, s.pressT / .12) * Math.PI) : 0);
+  g.scale(sc, 2 - sc);
+  const bg = g.createRadialGradient(-r * .25, -r * .3, r * .1, 0, 0, r);
+  if (s.type === 'moon') { bg.addColorStop(0, '#fffdf2'); bg.addColorStop(.6, '#fff0b8'); bg.addColorStop(1, '#e9c56e'); }
+  else if (s.type === 'lantern') { bg.addColorStop(0, '#fff3e0'); bg.addColorStop(.6, '#f7c59b'); bg.addColorStop(1, '#d98a5a'); }
+  else if (s.type === 'bell') { bg.addColorStop(0, '#f1ecff'); bg.addColorStop(.6, '#c9b8ef'); bg.addColorStop(1, '#8f78c9'); }
+  else if (dim) { bg.addColorStop(0, '#f8f1dc'); bg.addColorStop(.6, '#e8d79a'); bg.addColorStop(1, '#b9a060'); }
+  else { bg.addColorStop(0, '#fff8e8'); bg.addColorStop(.6, '#ffe59a'); bg.addColorStop(1, '#d9a23e'); }
+  g.fillStyle = bg; g.beginPath(); g.ellipse(0, -r * .1, r * .78, r * .9, 0, 0, TAU); g.fill(); outline(g, 'rgba(120,90,40,.45)', 1.4);
+  if (s.type === 'moon') { g.fillStyle = 'rgba(255,255,255,.9)'; star(g, 0, -r * .15, r * .35, 5); g.fill(); }
+  if (s.type === 'lantern') { g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(-r * .2, -r * .3, r * .14, 0, TAU); g.arc(r * .25, 0, r * .1, 0, TAU); g.fill(); }
+  g.restore();
+}
+function drawFlower(g, s, t) {
+  // k: bloom progress 0..1 with springy overshoot; scale with squash
+  const k = s.bloomK, pal = s.pal;
+  const wob = REDUCED ? 0 : Math.sin(t * 1.4 + s.ph) * .05;
+  g.save(); g.translate(s.x, s.y); g.rotate(wob);
+  const scale = (0.2 + .8 * ease.outBack(clamp(k, 0, 1))) * (s.tapScale || 1);
+  g.scale(scale, scale);
+  g.fillStyle = 'rgba(40,60,30,.14)'; g.beginPath(); g.ellipse(0, s.r * .5, s.r * 1.2, s.r * .32, 0, 0, TAU); g.fill();
+  if (s.type === 'moon') return drawMoonflower(g, s, t), g.restore();
+  if (s.type === 'lantern') return drawLantern(g, s, t), g.restore();
+  // leaves
+  g.fillStyle = '#7fae73'; [[-1], [1]].forEach(([d]) => { g.beginPath(); g.moveTo(0, s.r * .4); g.quadraticCurveTo(d * s.r * 1.5, s.r * .5, d * s.r * 1.2, -s.r * .2); g.quadraticCurveTo(d * s.r * .6, s.r * .1, 0, s.r * .4); g.fill(); });
+  const n = s.type === 'bell' ? 5 : 6, pr = s.r * .95;
+  for (let layer = 0; layer < 2; layer++) {
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU + layer * (Math.PI / n) + (s.spin || 0), rr = layer ? pr * .68 : pr;
+      g.save(); g.rotate(a); g.translate(rr * .55, 0);
+      g.fillStyle = layer ? pal.p2 : pal.p; g.beginPath(); g.ellipse(0, 0, rr * .58, rr * .36, 0, 0, TAU); g.fill();
+      if (!layer) outline(g, 'rgba(120,80,110,.35)', 1.2);
+      g.restore();
+    }
+  }
+  g.fillStyle = pal.c; g.beginPath(); g.arc(0, 0, s.r * .33, 0, TAU); g.fill(); outline(g, 'rgba(150,110,40,.45)', 1.2);
+  g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(-s.r * .1, -s.r * .1, s.r * .1, 0, TAU); g.fill();
+  if (s.golden) { g.fillStyle = 'rgba(255,230,120,.9)'; star(g, 0, 0, s.r * .22, 5); g.fill(); }
+  g.restore();
+}
+function drawMoonflower(g, s, t) {
+  const R = s.r;
+  const pulse = REDUCED ? .5 : 0.5 + 0.5 * Math.sin(t * 2);
+  const gr = g.createRadialGradient(0, 0, R * .2, 0, 0, R * 3.4); gr.addColorStop(0, `rgba(255,245,200,${.5 + .3 * pulse})`); gr.addColorStop(.5, 'rgba(255,235,170,.18)'); gr.addColorStop(1, 'rgba(255,235,170,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R * 3.4, 0, TAU); g.fill();
+  g.fillStyle = '#7fae73'; for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + .4; g.save(); g.rotate(a); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(R * .9, R * .5, R * 1.6, 0); g.quadraticCurveTo(R * .9, -R * .5, 0, 0); g.fill(); g.restore(); }
+  for (let layer = 0; layer < 3; layer++) {
+    const n = 8, rr = R * (1.1 - layer * .28);
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU + layer * .39 + (s.spin || 0) * (layer + 1);
+      g.save(); g.rotate(a); g.translate(rr * .5, 0);
+      g.fillStyle = ['#fff6d2', '#fff0b8', '#ffe59a'][layer]; g.beginPath(); g.ellipse(0, 0, rr * .6, rr * .3, 0, 0, TAU); g.fill();
+      if (!layer) outline(g, 'rgba(190,150,60,.4)', 1.2);
+      g.restore();
+    }
+  }
+  const cg = g.createRadialGradient(0, 0, 0, 0, 0, R * .45); cg.addColorStop(0, '#fffdf2'); cg.addColorStop(1, '#f3c45c');
+  g.fillStyle = cg; g.beginPath(); g.arc(0, 0, R * .45, 0, TAU); g.fill(); outline(g, 'rgba(170,120,40,.45)', 1.3);
+  g.fillStyle = 'rgba(255,255,255,.95)'; star(g, 0, 0, R * .26, 5); g.fill();
+}
+function drawLantern(g, s, t) {
+  // lantern mushroom: glows and hums fireflies
+  const R = s.r;
+  const gr = g.createRadialGradient(0, -R * .3, R * .1, 0, -R * .3, R * 2.6); gr.addColorStop(0, 'rgba(255,220,150,.55)'); gr.addColorStop(1, 'rgba(255,220,150,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(0, -R * .3, R * 2.6, 0, TAU); g.fill();
+  g.fillStyle = '#fff1dc'; g.beginPath(); g.roundRect ? g.roundRect(-R * .3, -R * .3, R * .6, R * .8, R * .2) : g.rect(-R * .3, -R * .3, R * .6, R * .8); g.fill(); outline(g, 'rgba(150,100,60,.4)', 1.2);
+  const cg = g.createRadialGradient(0, -R * .5, 0, 0, -R * .5, R * 1.1); cg.addColorStop(0, '#ffe9b0'); cg.addColorStop(1, '#f0975a');
+  g.fillStyle = cg; g.beginPath(); g.ellipse(0, -R * .45, R * 1.05, R * .62, 0, Math.PI, TAU); g.closePath(); g.fill(); outline(g, 'rgba(150,80,50,.45)', 1.3);
+  g.fillStyle = 'rgba(255,255,255,.85)'; [[-.5, -.7, .14], [.2, -.95, .1], [.6, -.6, .11]].forEach(([a, b, c]) => { g.beginPath(); g.arc(a * R, b * R, c * R, 0, TAU); g.fill(); });
+}
+
+// ----------------------------------------------------------------- Game state
+const MAX_PARTICLES = REDUCED ? 90 : 260;
+const Game = {
+  state: 'idle',          // idle (first screen) | playing | ending | results
+  round: 0, daily: false, dailySeed: 0,
+  seeds: [], petals: [], pulses: [], floats: [], sparkles: [],
+  sparks: 3, score: 0, chain: 0, bestChain: 0, blooms: 0, moons: 0, chainActive: false,
+  settleT: 0, endT: 0, timeScale: 1, slowT: 0, cam: { k: 0, x: 0, y: 0 }, focus: -1,
+  tapCount: 0, lastBloom: null, unlockedThisRound: null, fullBloom: false,
+  mochi: { x: 0, y: 0, mood: 'sleep', blink: 1, blinkT: 2, hop: 0, hopV: 0, squash: 0, wiggle: 0, lookX: 0, lookY: 0 },
+  pip: { seed: null, k: 0, target: 0, blink: 1, blinkT: 1, mood: 'awake', earWave: false, waveT: 0 },
+  moth: { x: 0, y: 0, tx: 0, ty: 0, blink: 1, blinkT: 1, rot: 0, on: false },
+  U: 0, field: null,
+};
+Game.layoutField = () => {
+  const sab = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0;
+  const y1 = H - (W > H * 1.1 ? 72 : 100) - sab, top = Scene.meadowY + H * .005;
+  const availH = Math.max(120, y1 - top);
+  const U = Math.min(W, availH / 1.012); Game.U = U;           // one "garden unit": radii, spacing and field all scale with it
+  const w = U * .92, h = w * 1.1;
+  const x0 = W / 2 - w / 2, y0 = y1 - h;
+  Game.field = { x0, x1: x0 + w, y0, y1, w, h };
+};
+Game.radiusFor = type => Game.U * (type === 'moon' ? .30 : type === 'lantern' ? .25 : type === 'bell' ? .19 : .21);
+
+function mkSeed(u, v, type, extra) {
+  const f = Game.field;
+  return Object.assign({ u, v, x: f.x0 + u * f.w, y: f.y0 + v * f.w, r: Game.U * (type === 'moon' ? .075 : .046), type, state: 'sleep', bloomK: 0, bloomAt: 0, chainIdx: 0, ph: Math.random() * TAU, hint: false, pressT: 0, tapScale: 1, spin: 0, pal: PALETTES[Math.floor(Math.random() * PALETTES.length)], golden: false }, extra || {});
+}
+
+// Round 1 is hand-placed so the first minute is deliberate: one obvious seed, a satisfying first chain,
+// a clear two-way choice, and a moonflower cluster that pays off big.
+const ROUND1 = {
+  start: [0.50, 0.95],
+  seeds: [[0.34, 0.89], [0.66, 0.91], [0.44, 0.79], [0.58, 0.77], [0.22, 0.79], [0.78, 0.81], [0.50, 0.65],   // first chain (8 with the start)
+    [0.12, 0.55], [0.08, 0.39], [0.24, 0.45], [0.30, 0.31], [0.14, 0.23], [0.06, 0.11], [0.30, 0.13],           // left cluster (7)
+    [0.72, 0.55], [0.90, 0.51], [0.62, 0.41], [0.90, 0.27], [0.66, 0.23], [0.56, 0.27], [0.84, 0.13]],          // moonflower cluster (8 with the moon)
+  moon: [0.78, 0.39],
+};
+
+Game.generate = function (round, rng) {
+  const seeds = [];
+  if (round === 1 && !Game.daily) {
+    seeds.push(mkSeed(ROUND1.start[0], ROUND1.start[1], 'seed', { hint: true, first: true }));
+    ROUND1.seeds.forEach(([u, v]) => seeds.push(mkSeed(u, v, 'seed')));
+    seeds.push(mkSeed(ROUND1.moon[0], ROUND1.moon[1], 'moon'));
+    return seeds;
+  }
+  const diff = Game.daily ? 4 : Math.min(round, 8);
+  const count = 20 + diff * 2;
+  const minD = Game.U * .095;
+  const centers = []; const nC = 3 + (diff > 3 ? 1 : 0);
+  for (let i = 0, k = 0; i < nC && k < 400; k++) { const c = [rng.range(.12, .88), rng.range(.12, .98)]; if (centers.every(o => dist(o[0], o[1], c[0], c[1]) > .42)) { centers.push(c); i++; } }
+  let tries = 0;
+  while (seeds.length < count && tries++ < 900) {
+    const c = rng.pick(centers); const a = rng() * TAU, d = Math.pow(rng(), .7) * .3;
+    const u = clamp(c[0] + Math.cos(a) * d, .05, .95), v = clamp(c[1] + Math.sin(a) * d, .05, 1.05);
+    const x = Game.field.x0 + u * Game.field.w, y = Game.field.y0 + v * Game.field.w;
+    const ci = centers.indexOf(c);
+    if (seeds.some(s => dist(s.x, s.y, x, y) < (s.c === ci ? minD : Game.U * .25))) continue;   // clusters stay apart: a tap wakes one cluster, specials bridge them
+    if (Scene.pond && dist(x, y, Scene.pond.x, Scene.pond.y) < Scene.pond.rx * 1.1) continue;
+    seeds.push(mkSeed(u, v, 'seed', { c: ci }));
+  }
+  // special seeds: convert some regular ones
+  const specials = [];
+  specials.push('moon'); if (diff >= 6 && rng() < .5) specials.push('moon');
+  if (diff >= 3) { specials.push('lantern'); if (diff >= 5) specials.push('lantern'); }
+  if (diff >= 5) specials.push('bell'); if (diff >= 7) specials.push('bell');
+  const pool = seeds.slice(); 
+  for (const t of specials) { if (!pool.length) break; const i = Math.floor(rng() * pool.length); const s = pool.splice(i, 1)[0]; s.type = t; if (t === 'moon') s.r = Game.U * .075; }
+  if (!Game.daily && Store.get().unlocks.golden && rng() < .45 && pool.length) { const s = pool[Math.floor(rng() * pool.length)]; s.golden = true; s.pal = PALETTES[2]; }
+  // pick the start seed: the one with the best chain reach near the bottom-middle
+  // start seed: a solid opening chain near the thumb that does NOT already swallow the moonflower — finding that is the player's job
+  let best = null, bestV = -1, fallback = null, fbV = -1;
+  for (const s of seeds) {
+    if (s.type !== 'seed') continue;
+    const set = Game.reachSet(s, seeds); const v = set.size + s.v * 2;
+    if (![...set].some(o => o.type === 'moon')) { if (v > bestV) { bestV = v; best = s; } }
+    if (v > fbV) { fbV = v; fallback = s; }
+  }
+  best = best || fallback;
+  if (best) { best.first = true; best.hint = !Game.daily && round <= 3; }
+  return seeds;
+};
+// How many seeds a tap on `s` would bloom (simple flood through chain radii).
+Game.reachSet = function (s, seeds) {
+  const seen = new Set([s]); const q = [s];
+  while (q.length) { const a = q.shift(); const R = Game.radiusFor(a.type); for (const b of seeds) { if (seen.has(b) || b.state !== 'sleep') continue; if (dist(a.x, a.y, b.x, b.y) <= R) { seen.add(b); q.push(b); } } }
+  return seen;
+};
+Game.reach = (s, seeds) => Game.reachSet(s, seeds).size;
+Game.relayout = function () {
+  Game.layoutField(); const f = Game.field;
+  for (const s of Game.seeds) { s.x = f.x0 + s.u * f.w; s.y = f.y0 + s.v * f.w; s.r = Game.U * (s.type === 'moon' ? .075 : .046); }
+  Game.placeCreatures();
+};
+Game.placeCreatures = function () {
+  const first = Game.seeds.find(s => s.first) || Game.seeds[0]; if (!first) return;
+  // Mochi sits beside the first seed, on whichever side has the most open grass
+  let bx = first.x + Game.U * .17, by = first.y, bestGap = -1;
+  for (const [dx, dy] of [[.17, 0], [-.17, 0], [.2, .08], [-.2, .08], [.24, -.04], [-.24, -.04], [.3, .04], [-.3, .04]]) {
+    const x = first.x + dx * Game.U, y = first.y + dy * Game.U;
+    if (x < Game.U * .1 || x > W - Game.U * .1 || y > Game.field.y1 + 10) continue;
+    if (Scene.pond && dist(x, y, Scene.pond.x, Scene.pond.y) < Scene.pond.rx * 1.2) continue;
+    let gap = 1e9; for (const o of Game.seeds) if (o !== first) gap = Math.min(gap, dist(x, y, o.x, o.y));
+    if (gap > bestGap) { bestGap = gap; bx = x; by = y; }
+  }
+  Game.mochi.x = bx; Game.mochi.y = by - Game.U * .01;
+  Game.pip.seed = Game.seeds.find(s => s.type === 'moon') || null;
+  if (!Game.moth.on) { Game.moth.x = W * .5; Game.moth.y = Scene.meadowY; }
+};
+
+Game.newRound = function () {
+  Game.round++;
+  const rng = Game.daily ? makeRng(hashStr('moss-moon-' + todayKey())) : makeRng((Math.random() * 1e9) >>> 0);
+  Game.layoutField();
+  Game.seeds = Game.generate(Game.round, rng); Game.anyHint = Game.seeds.some(s => s.hint);
+  Game.petals.length = 0; Game.pulses.length = 0; Game.floats.length = 0; Game.sparkles.length = 0; Scene.ripples.length = 0;
+  Game.sparks = 3; Game.score = 0; Game.chain = 0; Game.bestChain = 0; Game.blooms = 0; Game.moons = 0; Game.chainActive = false;
+  Game.settleT = 0; Game.endT = 0; Game.timeScale = 1; Game.slowT = 0; Game.cam.k = 0; Game.focus = -1; Game.tapCount = 0; Game.fullBloom = false; Game.unlockedThisRound = null;
+  Object.assign(Game.mochi, { mood: Game.round === 1 ? 'sleep' : 'awake', hop: 0, hopV: 0, squash: 0 });
+  Object.assign(Game.pip, { k: 0, target: 0, earWave: false });
+  Game.moth.on = !!Store.get().unlocks.moth;
+  Game.placeCreatures();
+  Game.state = Game.round === 1 && !Game.daily && Store.get().rounds === 0 ? 'idle' : 'playing';
+  UI.roundStart();
+};
+
+// ----------------------------------------------------------------- Input → bloom
+Game.hitSeed = function (x, y) {
+  let best = null, bd = 1e9;
+  for (const s of Game.seeds) { const hr = Math.max(s.r * 1.7, 30); const d = dist(x, y, s.x, s.y); if (d < hr && d < bd) { bd = d; best = s; } }
+  return best;
+};
+Game.tapAt = function (x, y) {
+  if (Game.state === 'results') return;
+  Audio.unlock();
+  const s = Game.hitSeed(x, y);
+  if (!s) { Game.touchGround(x, y); return; }
+  Game.tapSeed(s);
+};
+Game.tapSeed = function (s) {
+  if (s.state === 'bloom') { // free, playful: wiggle + petal puff
+    s.tapScale = 1.25; s.spin += .35; Game.puff(s.x, s.y, 5, s.pal.p); Audio.drop(1); return;
+  }
+  if (s.state !== 'sleep') return;
+  if (Game.sparks <= 0) { Audio.miss(); UI.toast('No sparks left — the garden is settling 🌙'); return; }
+  Game.sparks--; Game.tapCount++;
+  if (Game.state === 'idle') { Game.state = 'playing'; UI.hideInvite(); }
+  for (const o of Game.seeds) o.hint = false; Game.anyHint = false;
+  Audio.tap();
+  s.state = 'bud'; s.pressT = .001; s.bloomAt = .13; s.chainIdx = 0; // anticipation squish, then bloom
+  Game.chain = 0; Game.chainActive = true; Game.settleT = 0;
+  UI.sparks();
+  // Mochi wakes on the very first tap
+  if (Game.mochi.mood === 'sleep') { Game.mochi.mood = 'wow'; Game.mochi.hopV = -260; Game.mochi.wowT = 1.1; }
+};
+Game.touchGround = function (x, y) {
+  const p = Scene.pond;
+  if (p && dist(x, y, p.x, p.y) < p.rx * 1.1) { Scene.ripples.push({ x, y, t: 0 }); Audio.drop(2); return; }
+  Game.pulses.push({ x, y, r: 0, R: Game.U * .12, t: 0, dur: .45, soft: true });
+  Game.puff(x, y, 3, '#fff6d8', true);
+};
+Game.puff = function (x, y, n, col, tiny) {
+  for (let i = 0; i < n; i++) {
+    if (Game.petals.length >= MAX_PARTICLES) Game.petals.shift();
+    const a = Math.random() * TAU, sp = tiny ? 30 + Math.random() * 40 : 60 + Math.random() * 120;
+    Game.petals.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, rot: Math.random() * TAU, vr: (Math.random() - .5) * 6, s: tiny ? 2 : 3 + Math.random() * 3.5, col, t: 0, life: 1.4 + Math.random() * 1.2, sw: Math.random() * TAU });
+  }
+};
+Game.bloom = function (s) {
+  s.state = 'bloom'; s.bloomK = 0; s.pressT = 0;
+  Game.blooms++; Game.chain++; s.chainIdx = Game.chain; Game.lastBloom = s;
+  if (Game.chain > Game.bestChain) Game.bestChain = Game.chain;
+  // scoring: the n-th bloom of a chain is worth n moon-drops (capped at 10). Specials add on top.
+  let pts = Math.min(Game.chain, 10);
+  if (s.golden) pts *= 2;
+  if (s.type === 'moon') pts += 25;
+  if (s.type === 'lantern') pts += 5;
+  if (s.type === 'bell') pts += 3;
+  Game.score += pts;
+  Game.floats.push({ x: s.x, y: s.y - s.r * 1.4, text: '+' + pts, t: 0, big: pts >= 10, col: s.type === 'moon' ? '#fff2c4' : s.golden ? '#ffe59a' : '#fff' });
+  UI.score(); UI.chain(Game.chain);
+  // pulse ring
+  const R = Game.radiusFor(s.type);
+  Game.pulses.push({ x: s.x, y: s.y, r: 0, R, t: 0, dur: s.type === 'moon' ? 1.1 : .62, big: s.type === 'moon' });
+  // petals
+  const n = s.type === 'moon' ? (REDUCED ? 16 : 48) : 6 + Math.min(Game.chain, 8);
+  Game.puff(s.x, s.y, n, s.type === 'moon' ? '#fff0b8' : s.pal.p);
+  if (s.type === 'moon') { Game.puff(s.x, s.y, REDUCED ? 6 : 20, '#fffdf2'); }
+  // audio: climbing melody per chain index
+  if (s.type === 'moon') Audio.moon(); else Audio.bloom(Game.chain - 1);
+  if (pts >= 10) Audio.drop(Game.chain);
+  // schedule neighbours (staggered by distance → readable wave)
+  for (const o of Game.seeds) {
+    if (o.state !== 'sleep') continue;
+    const d = dist(s.x, s.y, o.x, o.y);
+    if (d <= R) { o.state = 'bud'; o.bloomAt = .2 + (d / R) * .3 + Math.random() * .05; }
+  }
+  if (s.type === 'bell') { // bluebell rings twice: a second, wider pulse a moment later
+    Game.pulses.push({ x: s.x, y: s.y, r: 0, R: R * 1.6, t: -.5, dur: .7, bell: true, src: s });
+  }
+  if (s.type === 'lantern') { for (let i = 0; i < 3; i++) Scene.fireflies.push({ x: s.x, y: s.y, ph: Math.random() * TAU, a: Math.random() * TAU, sp: 12 + Math.random() * 12 }); if (Scene.fireflies.length > 40) Scene.fireflies.splice(0, Scene.fireflies.length - 40); }
+  // creature reactions
+  const m = Game.mochi;
+  if (Game.chain === 5 || Game.chain === 10 || Game.chain === 15) { m.hopV = -220; m.mood = 'happy'; m.happyT = 1.2; }
+  if (s.type === 'moon') Game.magicMoment(s);
+};
+Game.magicMoment = function (s) {
+  Game.moons++;
+  if (!REDUCED) { Game.timeScale = .3; Game.slowT = 1.1; Game.cam = { k: 1, x: s.x, y: s.y }; }
+  Game.mochi.mood = 'wow'; Game.mochi.wowT = 2; Game.mochi.hopV = -300;
+  Game.pip.seed = s; Game.pip.target = 1; Game.pip.earWave = true; Game.pip.waveT = 2.2;
+  for (let i = 0; i < (REDUCED ? 8 : 26); i++) Game.sparkles.push({ x: s.x + (Math.random() - .5) * s.r * 2, y: s.y + (Math.random() - .5) * s.r * 2, vx: (Math.random() - .5) * 90, vy: -40 - Math.random() * 120, t: 0, life: 1.6 + Math.random(), s: 2 + Math.random() * 3 });
+  const st = Store.get();
+  if (!st.unlocks.pip) { st.unlocks.pip = true; Store.save(); Game.unlockedThisRound = { id: 'pip', text: 'You found Pip! The shy one who hides behind moonflowers.' }; UI.toast('🌸 A moonflower! Pip peeks out…'); Audio.creature(); }
+  else UI.toast('🌙 Moonflower! +25');
+};
+
+// ----------------------------------------------------------------- Update
+Game.update = function (dt, t) {
+  // slow-motion recovery
+  if (Game.slowT > 0) { Game.slowT -= dt; if (Game.slowT <= 0) Game.slowT = 0; Game.timeScale = lerp(Game.timeScale, Game.slowT > 0 ? .3 : 1, 1 - Math.pow(.001, dt)); }
+  else if (Game.timeScale < 1) Game.timeScale = Math.min(1, Game.timeScale + dt * 1.6);
+  if (Game.cam.k > 0 && Game.slowT <= 0) Game.cam.k = Math.max(0, Game.cam.k - dt * 1.4);
+  const gdt = dt * Game.timeScale; // game-time delta
+  let pending = false;
+  for (const s of Game.seeds) {
+    if (s.state === 'bud') { pending = true; s.bloomAt -= gdt; if (s.pressT > 0) s.pressT += gdt; if (s.bloomAt <= 0) Game.bloom(s); }
+    else if (s.state === 'bloom') { s.bloomK = Math.min(1.6, s.bloomK + gdt * 2.4); s.tapScale += (1 - s.tapScale) * (1 - Math.pow(.0005, dt)); s.spin *= Math.pow(.02, dt); }
+  }
+  for (let i = Game.pulses.length - 1; i >= 0; i--) {
+    const p = Game.pulses[i]; p.t += gdt / p.dur;
+    if (p.bell && p.t >= 0 && !p.fired) { p.fired = true; const src = p.src; Audio.bloom(Game.chain); for (const o of Game.seeds) { if (o.state !== 'sleep') continue; const d = dist(src.x, src.y, o.x, o.y); if (d <= p.R) { o.state = 'bud'; o.bloomAt = .16 + (d / p.R) * .3; } } }
+    if (p.t < 0) { pending = true; continue; }
+    p.r = p.R * ease.outCubic(Math.min(1, p.t)); if (p.t >= 1) Game.pulses.splice(i, 1);
+  }
+  // chain settles when nothing is pending
+  if (Game.chainActive && !pending) {
+    Game.settleT += dt;
+    if (Game.settleT > .55) { Game.chainActive = false; Game.chainEnd(); }
+  }
+  // particles
+  const wind = Math.sin(t * .8) * 18;
+  for (let i = Game.petals.length - 1; i >= 0; i--) {
+    const p = Game.petals[i]; p.t += gdt; if (p.t > p.life) { Game.petals.splice(i, 1); continue; }
+    p.vy += 55 * gdt; p.vx += (wind - p.vx) * .4 * gdt; p.vy = Math.min(p.vy, 40);
+    p.x += (p.vx + Math.sin(t * 3 + p.sw) * 14) * gdt; p.y += p.vy * gdt; p.rot += p.vr * gdt;
+  }
+  for (let i = Game.sparkles.length - 1; i >= 0; i--) { const p = Game.sparkles[i]; p.t += gdt; if (p.t > p.life) { Game.sparkles.splice(i, 1); continue; } p.x += p.vx * gdt; p.y += p.vy * gdt; p.vy += 20 * gdt; }
+  for (let i = Game.floats.length - 1; i >= 0; i--) { const f = Game.floats[i]; f.t += dt; if (f.t > 1.1) Game.floats.splice(i, 1); }
+  for (let i = Scene.ripples.length - 1; i >= 0; i--) { const r = Scene.ripples[i]; r.t += dt * .8; if (r.t >= 1) Scene.ripples.splice(i, 1); }
+  Game.updateCreatures(dt, t);
+  if (Game.state === 'ending') { Game.endT -= dt; if (Game.endT <= 0) Game.finish(); }
+};
+Game.chainEnd = function () {
+  UI.chainHide();
+  const sleeping = Game.seeds.filter(s => s.state === 'sleep');
+  if (sleeping.length === 0) { Game.fullBloom = true; Game.score += 40; UI.score(); UI.toast('🌼 Full bloom! +40'); Audio.full(); Game.state = 'ending'; Game.endT = 1.6; return; }
+  if (Game.sparks <= 0) { Game.state = 'ending'; Game.endT = 1.1; return; }
+  // round 1 teaches the decision: the two strongest seeds glow brighter
+  if (Game.round === 1 && !Game.daily) {
+    const scored = sleeping.map(s => [Game.reach(s, Game.seeds), s]).sort((a, b) => b[0] - a[0]);
+    const a = scored[0][1]; a.hint = true;
+    const reachA = new Set(); (function flood(x) { reachA.add(x); const R = Game.radiusFor(x.type); for (const o of Game.seeds) if (!reachA.has(o) && o.state === 'sleep' && dist(x.x, x.y, o.x, o.y) <= R) flood(o); })(a);
+    const b = scored.find(([, s]) => !reachA.has(s)); if (b) b[1].hint = true;   // the second hint opens a different cluster: a real choice
+    Game.anyHint = true;
+  }
+};
+Game.finish = function () { Game.state = 'results'; UI.results(); };
+
+Game.updateCreatures = function (dt, t) {
+  const m = Game.mochi;
+  m.blinkT -= dt; if (m.blinkT <= 0) { m.blinkT = 2 + Math.random() * 3; m.blinkAnim = .25; }
+  if (m.blinkAnim > 0) { m.blinkAnim -= dt; m.blink = Math.abs(Math.sin(m.blinkAnim / .25 * Math.PI)); } else m.blink = 1;
+  if (m.wowT > 0) { m.wowT -= dt; if (m.wowT <= 0) m.mood = 'awake'; }
+  if (m.happyT > 0) { m.happyT -= dt; if (m.happyT <= 0) m.mood = 'awake'; }
+  m.hopV += 1300 * dt; m.hop += m.hopV * dt; if (m.hop > 0) { m.hop = 0; if (m.hopV > 60) { m.hopV = -m.hopV * .35; m.squash = .6; } else m.hopV = 0; }
+  m.squash += (0 - m.squash) * (1 - Math.pow(.002, dt)); if (m.hop < -4) m.squash = lerp(m.squash, -.35, .2);
+  if (Game.lastBloom) { m.lookX = clamp((Game.lastBloom.x - m.x) / W * 3, -1, 1); m.lookY = clamp((Game.lastBloom.y - m.y) / H * 3, -1, 1); }
+  const p = Game.pip;
+  p.k += (p.target - p.k) * (1 - Math.pow(.004, dt));
+  p.blinkT -= dt; if (p.blinkT <= 0) { p.blinkT = 2.5 + Math.random() * 3; p.blinkAnim = .22; }
+  if (p.blinkAnim > 0) { p.blinkAnim -= dt; p.blink = Math.abs(Math.sin(p.blinkAnim / .22 * Math.PI)); } else p.blink = 1;
+  if (p.waveT > 0) { p.waveT -= dt; if (p.waveT <= 0) p.earWave = false; }
+  p.mood = p.waveT > 1.3 ? 'happy' : 'awake';
+  const mo = Game.moth;
+  if (mo.on) {
+    const lb = Game.lastBloom; const ax = lb ? lb.x : W / 2, ay = lb ? lb.y - Game.U * .15 : Scene.meadowY;
+    mo.tx = ax + Math.sin(t * .9) * Game.U * .22; mo.ty = ay + Math.cos(t * 1.3) * Game.U * .12 - Game.U * .08;
+    const dx = mo.tx - mo.x, dy = mo.ty - mo.y; mo.x += dx * (1 - Math.pow(.3, dt)); mo.y += dy * (1 - Math.pow(.3, dt));
+    mo.rot = clamp(dx / 300, -.4, .4);
+    mo.blinkT -= dt; if (mo.blinkT <= 0) { mo.blinkT = 3 + Math.random() * 3; mo.blinkAnim = .2; }
+    if (mo.blinkAnim > 0) { mo.blinkAnim -= dt; mo.blink = Math.abs(Math.sin(mo.blinkAnim / .2 * Math.PI)); } else mo.blink = 1;
+  }
+};
+
+// ----------------------------------------------------------------- Render
+function render(t) {
+  ctx.save();
+  if (Game.cam.k > 0) { const k = ease.inOut(Game.cam.k) * .07; ctx.translate(Game.cam.x, Game.cam.y); ctx.scale(1 + k, 1 + k); ctx.translate(-Game.cam.x, -Game.cam.y); }
+  ctx.drawImage(Scene.bg, 0, 0, W, H);
+  drawSkyLife(t);
+  drawWater(t);
+  drawGrass(t, Game.pulses);
+  // pulses (light waves through the grass)
+  for (const p of Game.pulses) {
+    if (p.t < 0) continue;
+    const a = (1 - p.t) * (p.soft ? .35 : .8);
+    ctx.save(); ctx.globalAlpha = a; ctx.lineWidth = p.big ? 10 : 5; ctx.strokeStyle = p.big ? 'rgba(255,240,190,1)' : 'rgba(255,250,225,1)';
+    ctx.shadowColor = 'rgba(255,240,180,.9)'; ctx.shadowBlur = p.big ? 30 : 14;
+    ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * .72, 0, 0, TAU); ctx.stroke();
+    if (!p.soft) { const g = ctx.createRadialGradient(p.x, p.y, p.r * .6, p.x, p.y, p.r); g.addColorStop(0, 'rgba(255,245,200,0)'); g.addColorStop(1, `rgba(255,245,200,${a * .35})`); ctx.fillStyle = g; ctx.shadowBlur = 0; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r, p.r * .72, 0, 0, TAU); ctx.fill(); }
+    ctx.restore();
+  }
+  // seeds & flowers, sorted by y so nearer ones overlap further ones; Pip peeks from behind the moonflower
+  const order = Game.seeds.slice().sort((a, b) => a.y - b.y);
+  const pip = Game.pip;
+  for (let i = 0; i < order.length; i++) {
+    const s = order[i];
+    if (pip.seed === s && pip.k > .01 && Store.get().unlocks.pip) { const k = ease.outBack(clamp(pip.k, 0, 1)); Chars.pip(ctx, s.x + s.r * .9, s.y - s.r * (0.2 + k * 1.5), s.r * .72, pip, t); }
+    if (s.state === 'bloom') drawFlower(ctx, s, t); else drawSeed(ctx, s, t, Game.focus >= 0 && Game.seeds[Game.focus] === s);
+  }
+  // Mochi sits in the meadow (drawn by depth too — simple: after seeds above it)
+  const m = Game.mochi; Chars.mochi(ctx, m.x, m.y, Game.U * .075, m, t);
+  // petals
+  ctx.save();
+  for (const p of Game.petals) { const a = 1 - p.t / p.life; ctx.globalAlpha = Math.min(1, a * 1.6); ctx.fillStyle = p.col; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.beginPath(); ctx.ellipse(0, 0, p.s, p.s * .55, 0, 0, TAU); ctx.fill(); ctx.restore(); }
+  for (const p of Game.sparkles) { const a = 1 - p.t / p.life; ctx.globalAlpha = a; ctx.fillStyle = '#fff8dc'; ctx.shadowColor = '#ffe59a'; ctx.shadowBlur = 8; star(ctx, p.x, p.y, p.s * (0.6 + .4 * Math.sin(t * 12 + p.x)), 4); ctx.fill(); }
+  ctx.restore();
+  drawAir(t, 1 / 60);
+  if (Game.moth.on) Chars.moth(ctx, Game.moth.x, Game.moth.y, Game.U * .045, Game.moth, t);
+  // floating score numbers
+  ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const f of Game.floats) { const k = f.t / 1.1; const y = f.y - ease.outCubic(k) * 34; ctx.globalAlpha = k < .7 ? 1 : 1 - (k - .7) / .3; ctx.font = `900 ${f.big ? 22 : 17}px ${getComputedStyle(document.body).fontFamily}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(70,45,90,.55)'; ctx.lineJoin = 'round'; ctx.strokeText(f.text, f.x, y); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, y); }
+  ctx.restore();
+  ctx.restore();
+}
+
+// ----------------------------------------------------------------- UI
+const $ = id => document.getElementById(id);
+const UI = {
+  el: { score: $('score'), pill: $('scorePill'), chain: $('chain'), chainN: $('chainN'), sparks: $('sparks'), invite: $('invite'), toast: $('toast'), results: $('results'), mute: $('muteBtn') },
+  toastT: 0, chainT: 0,
+  roundStart() {
+    UI.score(); UI.sparks(); UI.chainHide();
+    UI.el.results.classList.remove('show'); UI.el.results.setAttribute('aria-hidden', 'true'); document.body.classList.remove('res');
+    if (Game.state === 'idle') { UI.el.invite.classList.add('show'); UI.el.invite.setAttribute('aria-hidden', 'false'); UI.el.sparks.classList.remove('show'); }
+    else { UI.hideInvite(); UI.el.sparks.classList.add('show'); }
+    $('foot').textContent = (Game.daily ? "Today's garden" : 'Round ' + Game.round) + ' · Longer chains earn more per bloom';
+    canvas.focus({ preventScroll: true });
+  },
+  hideInvite() { UI.el.invite.classList.remove('show'); UI.el.invite.setAttribute('aria-hidden', 'true'); UI.el.sparks.classList.add('show'); },
+  score() { UI.el.score.textContent = Game.score; UI.el.pill.classList.remove('pop'); void UI.el.pill.offsetWidth; UI.el.pill.classList.add('pop'); },
+  sparks() {
+    const el = UI.el.sparks; el.querySelectorAll('.spark').forEach(e => e.remove());
+    for (let i = 0; i < 3; i++) { const d = document.createElement('span'); d.className = 'spark' + (i >= Game.sparks ? ' used' : ''); el.appendChild(d); }
+    el.setAttribute('aria-label', Game.sparks + ' of 3 sparks left');
+  },
+  chain(n) {
+    if (n < 2) return;
+    const el = UI.el.chain; UI.el.chainN.textContent = '×' + n;
+    el.className = 'chain show' + (n >= 8 ? ' big' : '') + (n >= 14 ? ' huge' : '');
+    el.setAttribute('aria-hidden', 'false'); UI.chainT = 1.4;
+  },
+  chainHide() { UI.el.chain.classList.remove('show'); UI.el.chain.setAttribute('aria-hidden', 'true'); },
+  toast(msg, dur = 2.2) { UI.el.toast.textContent = msg; UI.el.toast.classList.add('show'); UI.toastT = dur; },
+  tick(dt) {
+    if (UI.toastT > 0) { UI.toastT -= dt; if (UI.toastT <= 0) UI.el.toast.classList.remove('show'); }
+    if (UI.chainT > 0) { UI.chainT -= dt; if (UI.chainT <= 0 && !Game.chainActive) UI.chainHide(); }
+  },
+  setMuted(m) { Audio.setMuted(m); UI.el.mute.classList.toggle('muted', m); UI.el.mute.setAttribute('aria-pressed', String(m)); UI.el.mute.setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound'); },
+  results() {
+    const st = Store.get();
+    const isBest = Game.score > st.best && !Game.daily;
+    st.rounds++; st.drops += Game.score;
+    if (!Game.daily) { if (Game.score > st.best) st.best = Game.score; if (Game.bestChain > st.bestChain) st.bestChain = Game.bestChain; }
+    else { const k = todayKey(); st.daily[k] = Math.max(st.daily[k] || 0, Game.score); for (const key of Object.keys(st.daily)) if (key !== k) delete st.daily[key]; }
+    // milestone unlocks
+    const MIL = [
+      { id: 'moth', name: 'Moon Moth', need: 300, of: () => st.drops, unit: 'moon-drops', text: 'The Moon Moth has woken. She follows your blooms now.' },
+      { id: 'golden', name: 'Golden seed', need: 12, of: () => st.bestChain, unit: 'chain', text: 'A golden seed will sometimes grow — its bloom is worth double.' },
+      { id: 'cottage', name: 'Cottage lights', need: 800, of: () => st.drops, unit: 'moon-drops', text: 'Someone lit the cottage windows. The garden feels like home.' },
+      { id: 'meadow', name: 'Moonlit meadow', need: 2000, of: () => st.drops, unit: 'moon-drops', text: 'A thousand moon-drops. The whole meadow remembers you.' },
+    ];
+    let unlocked = Game.unlockedThisRound;
+    for (const mi of MIL) { if (!st.unlocks[mi.id] && mi.of() >= mi.need) { st.unlocks[mi.id] = true; if (!unlocked) unlocked = { id: mi.id, text: mi.text }; Audio.milestone(); } }
+    Store.save();
+    // fill card
+    const kick = Game.fullBloom ? 'Every seed bloomed' : Game.moons ? 'The moonflower opened' : 'The garden rests';
+    $('resKicker').textContent = kick;
+    const titles = Game.score >= 180 ? ['A <span class="moon">radiant</span> garden', 'Pure <span class="moon">moonlight</span>'] : Game.score >= 100 ? ['A <span class="moon">glowing</span> garden', 'What a <span class="moon">lovely</span> chain'] : Game.score >= 50 ? ['A <span class="moon">gentle</span> bloom', 'The garden <span class="moon">stirs</span>'] : ['A <span class="moon">sleepy</span> start', 'Seeds still <span class="moon">dreaming</span>'];
+    $('resTitle').innerHTML = titles[Game.round % titles.length];
+    $('resScore').textContent = '0'; UI.countUp($('resScore'), Game.score);
+    $('resChain').textContent = Game.bestChain; $('resBlooms').textContent = Game.blooms + '/' + Game.seeds.length;
+    $('resBest').textContent = Game.daily ? (st.daily[todayKey()] || 0) : st.best;
+    $('badge').classList.toggle('show', isBest && st.rounds > 1);
+    const parts = []; if (Game.moons) parts.push(Game.moons + ' moonflower' + (Game.moons > 1 ? 's' : '') + ' (+25)'); if (Game.fullBloom) parts.push('full bloom +40'); if (Game.bestChain >= 10) parts.push('max chain bonus reached');
+    $('breakdown').textContent = parts.join(' · ');
+    const un = $('unlock'); un.classList.toggle('show', !!unlocked);
+    if (unlocked) { $('unlockText').textContent = unlocked.text; UI.drawUnlockIcon(unlocked.id); }
+    // next goal
+    const next = MIL.find(mi => !st.unlocks[mi.id]);
+    if (next) { $('goalName').textContent = 'Next: ' + next.name; $('goalProg').textContent = Math.min(next.of(), next.need) + ' / ' + next.need + ' ' + next.unit; requestAnimationFrame(() => $('goalBar').style.width = Math.min(100, next.of() / next.need * 100) + '%'); }
+    else { $('goalName').textContent = 'Beat your best'; $('goalProg').textContent = st.best + ' moon-drops'; requestAnimationFrame(() => $('goalBar').style.width = Math.min(100, Game.score / Math.max(1, st.best) * 100) + '%'); }
+    $('dailyBtn').classList.toggle('on', Game.daily); $('dailyBtn').setAttribute('aria-pressed', String(Game.daily));
+    $('dailyLbl').textContent = Game.daily ? "Daily: on" : "Today's garden";
+    if (isBest && st.rounds > 1) Audio.best();
+    UI.el.sparks.classList.remove('show');
+    UI.el.results.classList.add('show'); UI.el.results.setAttribute('aria-hidden', 'false'); document.body.classList.add('res');
+    setTimeout(() => $('againBtn').focus({ preventScroll: true }), 350);
+  },
+  countUp(el, to) { const t0 = performance.now(), d = REDUCED ? 1 : 700; const step = now => { const k = Math.min(1, (now - t0) / d); el.textContent = Math.round(ease.outCubic(k) * to); if (k < 1) requestAnimationFrame(step); }; requestAnimationFrame(step); },
+  drawUnlockIcon(id) {
+    const c = $('unlockCanvas'); const g = c.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, 46, 46);
+    if (id === 'pip') Chars.pip(g, 23, 26, 13, { mood: 'happy', blink: 1 }, 0);
+    else if (id === 'moth') Chars.moth(g, 23, 23, 12, { blink: 1 }, 1.2);
+    else if (id === 'golden') drawFlower(g, { x: 23, y: 23, r: 13, bloomK: 1, pal: PALETTES[2], golden: true, type: 'seed', ph: 0 }, 0);
+    else Chars.mochi(g, 23, 25, 13, { mood: 'happy', blink: 1 }, 0);
+  },
+  share() {
+    const st = Store.get();
+    const text = `I woke the garden with a ${Game.bestChain}-bloom chain in Moss & Moon 🌙✨ ${Game.score} moon-drops${Game.moons ? ', and a moonflower opened' : ''}. Can you beat it?`;
+    const url = location.href.split('#')[0];
+    if (navigator.share) navigator.share({ title: 'Moss & Moon', text, url }).catch(() => {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(() => UI.toast('Copied — send it to a friend 💌')).catch(() => UI.toast(text, 4));
+    else UI.toast(text, 4);
+  },
+};
+
+// ----------------------------------------------------------------- Input & boot
+let lastT = 0, running = false, rafId = 0, gameT = 0;
+function frame(ts) {
+  rafId = requestAnimationFrame(frame);
+  if (!lastT) lastT = ts;
+  let dt = (ts - lastT) / 1000; lastT = ts; dt = Math.min(dt, .05); // clamp after tab switches
+  gameT += dt;
+  Game.update(dt, gameT); UI.tick(dt);
+  render(gameT);
+}
+function start() { if (running) return; running = true; lastT = 0; rafId = requestAnimationFrame(frame); }
+function stop() { running = false; cancelAnimationFrame(rafId); }
+
+canvas.addEventListener('pointerdown', e => { e.preventDefault(); canvas.focus({ preventScroll: true }); Game.tapAt(e.clientX, e.clientY); }, { passive: false });
+['touchstart', 'touchmove', 'gesturestart', 'dblclick'].forEach(ev => document.addEventListener(ev, e => { if (e.target === canvas || e.target.closest('.hud, .sparks')) e.preventDefault(); }, { passive: false }));
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+// keyboard: arrows cycle sleeping seeds, Enter/Space blooms, R new garden, M mute
+canvas.addEventListener('keydown', e => {
+  const sleeping = Game.seeds.map((s, i) => [s, i]).filter(([s]) => s.state === 'sleep').map(([, i]) => i);
+  if (['ArrowRight', 'ArrowDown', 'Tab'].includes(e.key) && !e.shiftKey && sleeping.length) { e.preventDefault(); const k = sleeping.indexOf(Game.focus); Game.focus = sleeping[(k + 1) % sleeping.length]; }
+  else if (['ArrowLeft', 'ArrowUp'].includes(e.key) || (e.key === 'Tab' && e.shiftKey)) { if (!sleeping.length) return; e.preventDefault(); const k = sleeping.indexOf(Game.focus); Game.focus = sleeping[(k - 1 + sleeping.length) % sleeping.length]; }
+  else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); Audio.unlock(); if (Game.focus < 0 || !Game.seeds[Game.focus] || Game.seeds[Game.focus].state !== 'sleep') Game.focus = sleeping.length ? (Game.seeds.findIndex(s => s.hint && s.state === 'sleep') >= 0 ? Game.seeds.findIndex(s => s.hint && s.state === 'sleep') : sleeping[0]) : -1; if (Game.focus >= 0) { Game.tapSeed(Game.seeds[Game.focus]); Game.focus = -1; } }
+  else if (e.key.toLowerCase() === 'r') { Game.newRound(); }
+  else if (e.key.toLowerCase() === 'm') { UI.setMuted(!Audio.muted); }
+});
+$('muteBtn').addEventListener('click', () => { Audio.unlock(); UI.setMuted(!Audio.muted); });
+$('restartBtn').addEventListener('click', () => { Audio.unlock(); Game.newRound(); });
+$('againBtn').addEventListener('click', () => { Audio.unlock(); Game.newRound(); });
+$('dailyBtn').addEventListener('click', () => { Audio.unlock(); Game.daily = !Game.daily; UI.toast(Game.daily ? "Today's garden — the same seeds for everyone 🌙" : 'Back to wild gardens 🌿'); $('dailyBtn').classList.toggle('on', Game.daily); $('dailyBtn').setAttribute('aria-pressed', String(Game.daily)); $('dailyLbl').textContent = Game.daily ? 'Daily: on' : "Today's garden"; });
+$('shareBtn').addEventListener('click', () => UI.share());
+
+let resizeT = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(resize, 120); });
+window.addEventListener('orientationchange', () => { clearTimeout(resizeT); resizeT = setTimeout(resize, 200); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else start(); });
+window.addEventListener('pagehide', stop); window.addEventListener('pageshow', start);
+
+UI.setMuted(!!Store.get().muted);
+resize();
+Game.newRound();
+start();
+window.MossMoon = { Game, Scene, Store, Audio, UI }; // for testing / tinkering
+</script>
+</body>
+</html>

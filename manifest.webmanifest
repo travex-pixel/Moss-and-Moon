@@ -1,0 +1,14 @@
+{
+  "name": "Moss & Moon",
+  "short_name": "Moss & Moon",
+  "description": "Tap a glowing seed and wake a tiny watercolor garden with a chain of blooms.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2c2a4a",
+  "theme_color": "#2c2a4a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
