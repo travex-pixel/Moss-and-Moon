@@ -188,6 +188,7 @@
     max-width: min(86vw, 360px); text-align: center;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.low { top: auto; bottom: calc(96px + var(--sab)); }
 
   /* ---------- Results ---------- */
   .results {
@@ -279,6 +280,31 @@
   .btn-ghost { position: relative; }
   .card .btn-row .btn-ghost { flex-direction: column; gap: 2px; min-height: 56px; font-size: 12.5px; padding: 6px 2px; }
   .card .btn-row .btn-ghost[hidden] { display: none; }
+  .pet-btn { position: fixed; right: calc(14px + var(--sar)); bottom: calc(14px + var(--sab)); width: 66px; height: 66px; border-radius: 50%; border: 0; padding: 0; z-index: 6; cursor: pointer;
+    background: rgba(255,247,232,.94); box-shadow: 0 6px 16px rgba(40,30,70,.35); display: grid; place-items: center; transition: transform .2s; }
+  .pet-btn[hidden], body.res .pet-btn { display: none; }
+  .pet-btn canvas { width: 52px; height: 52px; }
+  .pet-btn .ring { position: absolute; left: -3px; top: -3px; width: 72px; height: 72px; transform: rotate(-90deg); }
+  .pet-btn .ring circle { fill: none; stroke-width: 5; }
+  .pet-btn .ring .bg { stroke: rgba(63,51,80,.15); }
+  .pet-btn .ring .fg { stroke: #ffc94d; stroke-linecap: round; stroke-dasharray: 182.2; stroke-dashoffset: 182.2; transition: stroke-dashoffset .35s; }
+  .pet-btn .tap { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: #ff8fb4; color: #fff; font-weight: 900; font-size: 11px; letter-spacing: .5px; padding: 2px 8px; border-radius: 999px; opacity: 0; transition: opacity .2s; }
+  .pet-btn.ready { animation: petBounce 1s ease-in-out infinite; box-shadow: 0 0 0 4px rgba(255,214,120,.75), 0 0 26px rgba(255,200,90,.85); }
+  .pet-btn.ready .tap { opacity: 1; }
+  .pet-btn:focus-visible { outline: 3px solid #7fb4ff; outline-offset: 4px; }
+  @keyframes petBounce { 50% { transform: translateY(-5px) scale(1.06); } }
+  @media (max-width: 380px) { .sparks .lbl { display: none; } }
+  .pet-list { display: grid; gap: 8px; }
+  .pet-card { display: flex; align-items: center; gap: 12px; width: 100%; border: 0; text-align: left; padding: 10px 12px; border-radius: 18px; font-family: inherit; color: var(--ink); cursor: pointer; min-height: 74px;
+    background: rgba(255,255,255,.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,.85); }
+  .pet-card canvas { width: 58px; height: 58px; flex: none; }
+  .pet-card .pn { display: block; font-weight: 900; font-size: 16px; }
+  .pet-card .pp { display: block; font-weight: 900; font-size: 13px; color: #b8872e; }
+  .pet-card .pt { display: block; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); line-height: 1.3; }
+  .pet-card.sel { box-shadow: inset 0 0 0 3px #ffc94d, 0 4px 12px rgba(200,150,50,.25); background: rgba(255,240,200,.8); }
+  .pet-card.locked { background: rgba(63,51,80,.06); cursor: default; }
+  .pet-card:focus-visible { outline: 3px solid #7fb4ff; outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .pet-btn.ready { animation: none; } }
   .map {
     position: fixed; inset: 0; z-index: 20; display: flex; align-items: stretch; justify-content: center;
     padding: calc(12px + var(--sat)) 12px calc(12px + var(--sab));
@@ -397,6 +423,11 @@
 <div class="chain" id="chain" aria-hidden="true"><div class="n" id="chainN">×1</div><div class="t">chain</div><div class="w" id="chainW"></div></div>
 <div class="sparks" id="sparks" aria-label="Sparks remaining"><span class="lbl">Sparks</span></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<button class="pet-btn" id="petBtn" hidden>
+  <svg class="ring" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="29" class="bg"/><circle cx="32" cy="32" r="29" class="fg" id="petRing"/></svg>
+  <canvas id="petCanvas" width="104" height="104" aria-hidden="true"></canvas>
+  <span class="tap" aria-hidden="true">TAP!</span>
+</button>
 
 <div class="results" id="results" role="dialog" aria-modal="true" aria-labelledby="resTitle" aria-hidden="true">
   <div class="card">
@@ -455,6 +486,16 @@
   </div>
 </div>
 
+<div class="album" id="pets" role="dialog" aria-modal="true" aria-labelledby="petsTitle" aria-hidden="true">
+  <div class="sheet">
+    <div class="sheet-head">
+      <div><h3 id="petsTitle">Friends</h3><div class="sub">Catch seeds to fill the ring, then tap your friend to use their power.</div></div>
+      <button class="icon-btn" id="petsClose" aria-label="Close friends"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="pet-list" id="petList"></div>
+  </div>
+</div>
+
 <div class="album" id="album" role="dialog" aria-modal="true" aria-labelledby="albumTitle" aria-hidden="true">
   <div class="sheet">
     <div class="sheet-head">
@@ -504,7 +545,7 @@ const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:
 const Store = (() => {
   const KEY = 'mossmoon.v1';
   let mem = null;
-  const defaults = () => ({ best: 0, bestChain: 0, drops: 0, rounds: 0, muted: false, unlocks: {}, daily: {}, seen: {}, stickers: {}, stickerNew: {}, level: 1, stars: {}, lvlBest: {}, lastPlayed: 0 });
+  const defaults = () => ({ best: 0, bestChain: 0, drops: 0, rounds: 0, muted: false, unlocks: {}, daily: {}, seen: {}, stickers: {}, stickerNew: {}, level: 1, stars: {}, lvlBest: {}, lastPlayed: 0, pet: 'mochi', egg: null, dragon: { xp: 0, stage: 1 }, fails: {} });
   function load() {
     if (mem) return mem;
     mem = defaults();
@@ -970,6 +1011,50 @@ const Chars = {
     g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(sx - sr * .35, sy - sr * .45, sr * .18, sr * .1, -.6, 0, TAU); g.fill();
     g.restore();
   },
+  // SPRIG — a chubby baby moss dragon. Grows through three stages: hatchling, fledgling, moon dragon.
+  dragon(g, x, y, s, st, t) {
+    const stage = st.stage || 1, flap = REDUCED ? .5 : (st.flying ? Math.sin(t * 14) : Math.sin(t * 2.2) * .3) * .5 + .5;
+    g.save(); g.translate(x, y + (st.hop || 0)); if (st.flip) g.scale(-1, 1); g.rotate(st.rot || 0);
+    if (!st.flying) { g.fillStyle = 'rgba(40,60,30,.18)'; g.beginPath(); g.ellipse(0, s * .95, s * .9, s * .2, 0, 0, TAU); g.fill(); }
+    // tail with a leaf tip
+    g.strokeStyle = '#7fb57a'; g.lineWidth = s * .2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(s * .35, s * .55); g.quadraticCurveTo(s * 1.05, s * .75, s * .95, s * .2); g.stroke();
+    g.fillStyle = '#9fd28f'; g.beginPath(); g.ellipse(s * .95, s * .08, s * .13, s * .22, .5, 0, TAU); g.fill();
+    // wings (grow with each stage)
+    const ws = [.42, .62, .85][stage - 1];
+    [[-1], [1]].forEach(([d]) => {
+      g.save(); g.translate(d * s * .32, -s * .05); g.rotate(d * (-.5 - flap * .7)); g.scale(d, 1);
+      g.fillStyle = 'rgba(201,184,239,.85)'; g.beginPath(); g.moveTo(0, 0);
+      g.quadraticCurveTo(s * ws * .4, -s * ws * 1.3, s * ws * 1.1, -s * ws * .9); g.quadraticCurveTo(s * ws * .9, -s * ws * .4, s * ws * 1.0, -s * ws * .15);
+      g.quadraticCurveTo(s * ws * .6, -s * ws * .1, s * ws * .55, s * ws * .2); g.quadraticCurveTo(s * ws * .3, s * ws * .05, 0, s * .1); g.closePath(); g.fill();
+      outline(g, 'rgba(110,85,160,.55)', 1.3); g.restore();
+    });
+    // body + belly + feet
+    g.fillStyle = '#8fc48a'; g.beginPath(); g.ellipse(0, s * .35, s * .62, s * .6, 0, 0, TAU); g.fill(); outline(g, 'rgba(60,100,60,.6)', 1.8);
+    g.fillStyle = '#f3f0cf'; g.beginPath(); g.ellipse(0, s * .45, s * .38, s * .4, 0, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(190,170,110,.45)'; g.lineWidth = 1.2; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-s * .28 + i * .02, s * (.25 + i * .18)); g.quadraticCurveTo(0, s * (.3 + i * .18), s * .28, s * (.25 + i * .18)); g.stroke(); }
+    g.fillStyle = '#7fb57a'; [[-1], [1]].forEach(([d]) => { g.beginPath(); g.ellipse(d * s * .32, s * .9, s * .18, s * .11, 0, 0, TAU); g.fill(); });
+    // head
+    const hy = -s * .42;
+    g.fillStyle = '#8fc48a'; g.beginPath(); g.ellipse(0, hy, s * .66, s * .58, 0, 0, TAU); g.fill(); outline(g, 'rgba(60,100,60,.6)', 1.8);
+    g.fillStyle = '#a6d49c'; g.beginPath(); g.ellipse(s * .05, hy + s * .2, s * .34, s * .22, 0, 0, TAU); g.fill();   // snout
+    g.fillStyle = 'rgba(60,90,60,.6)'; [[-1], [1]].forEach(([d]) => { g.beginPath(); g.arc(s * .05 + d * s * .1, hy + s * .17, s * .03, 0, TAU); g.fill(); });
+    // leafy crest + horns (horns lengthen with stage)
+    g.fillStyle = '#6fae6a'; [[-.25, -.55, -.4], [0, -.62, 0], [.25, -.55, .4]].forEach(([cx, cy, r]) => { g.save(); g.translate(cx * s, hy + cy * s); g.rotate(r); g.beginPath(); g.ellipse(0, -s * .06, s * .08, s * .16, 0, 0, TAU); g.fill(); g.restore(); });
+    const hl = [.14, .22, .32][stage - 1];
+    g.fillStyle = '#f2d58a'; [[-1], [1]].forEach(([d]) => { g.beginPath(); g.moveTo(d * s * .38, hy - s * .38); g.quadraticCurveTo(d * s * (.5 + hl * .5), hy - s * (.5 + hl), d * s * (.55 + hl * .4), hy - s * (.52 + hl)); g.quadraticCurveTo(d * s * .52, hy - s * .4, d * s * .5, hy - s * .28); g.closePath(); g.fill(); outline(g, 'rgba(170,130,50,.55)', 1); });
+    if (stage === 1) { // a bit of eggshell still on its head
+      g.fillStyle = '#f4ecff'; g.beginPath(); g.moveTo(-s * .42, hy - s * .3); g.lineTo(-s * .3, hy - s * .52); g.lineTo(-s * .16, hy - s * .4); g.lineTo(-s * .04, hy - s * .58); g.lineTo(s * .08, hy - s * .42); g.quadraticCurveTo(-s * .2, hy - s * .25, -s * .42, hy - s * .3); g.fill(); outline(g, 'rgba(120,100,160,.5)', 1);
+      g.fillStyle = '#c9b8ef'; g.beginPath(); g.arc(-s * .2, hy - s * .38, s * .04, 0, TAU); g.fill();
+    }
+    if (stage === 3) { g.save(); g.shadowColor = 'rgba(255,230,150,.9)'; g.shadowBlur = 10; g.fillStyle = '#fff2c4'; star(g, 0, hy - s * .72, s * .12, 5); g.fill(); g.restore(); }
+    eyes(g, 0, hy - s * .02, s * .17, s * .26, st.mood || 'awake', st.blink == null ? 1 : st.blink, st.lookX || 0, st.lookY || 0);
+    blush(g, 0, hy + s * .14, s * .16, s * .44);
+    g.strokeStyle = '#3f3350'; g.lineWidth = 1.4; g.lineCap = 'round'; g.beginPath();
+    if (st.breath) { g.fillStyle = '#5b3a4e'; g.ellipse(s * .05, hy + s * .32, s * .1, s * .08, 0, 0, TAU); g.fill(); }
+    else { g.arc(s * .05, hy + s * .26, s * .1, Math.PI * .15, Math.PI * .85); g.stroke(); }
+    g.restore();
+  },
   // MOON MOTH — glowing, translucent watercolor wings.
   moth(g, x, y, s, st, t) {
     const flap = REDUCED ? .8 : Math.abs(Math.sin(t * 11)) * .7 + .3;
@@ -1057,6 +1142,26 @@ function drawSeed(g, s, t, focus) {
     g.save(); g.globalAlpha = Math.min(1, s.grumpyT * 2) * .9; g.fillStyle = '#fff4e1'; g.font = `900 ${Math.round(s.r * .9)}px ${FONT}`; g.textAlign = 'center';
     g.fillText('z', s.x + s.r * .9, s.y - s.r * 1.1 - (1.4 - s.grumpyT) * 8); g.restore();
   }
+}
+function drawEgg(g, x, y, s, warm, t, shake) {
+  const wob = (REDUCED ? 0 : Math.sin(t * 3) * .04 * (.4 + warm)) + (shake ? Math.sin(t * 40) * shake * .25 : 0);
+  g.save(); g.translate(x, y);
+  // nest
+  g.fillStyle = 'rgba(40,50,30,.2)'; g.beginPath(); g.ellipse(0, s * .55, s * 1.25, s * .3, 0, 0, TAU); g.fill();
+  g.fillStyle = '#7fae73'; g.beginPath(); g.ellipse(0, s * .45, s * 1.1, s * .36, 0, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(80,120,70,.8)'; g.lineWidth = 1.5; for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(0, s * .45, s * (.6 + i * .08), Math.PI * (.05 + i * .02), Math.PI * (.95 - i * .02)); g.stroke(); }
+  // warmth glow
+  if (warm > .05) { const gr = g.createRadialGradient(0, -s * .2, s * .2, 0, -s * .2, s * 1.6); gr.addColorStop(0, `rgba(255,220,150,${.45 * warm})`); gr.addColorStop(1, 'rgba(255,220,150,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, -s * .2, s * 1.6, 0, TAU); g.fill(); }
+  // egg
+  g.save(); g.translate(0, s * .3); g.rotate(wob); g.translate(0, -s * .3);
+  const eg = g.createRadialGradient(-s * .25, -s * .55, s * .1, 0, -s * .25, s * .9); eg.addColorStop(0, '#fffdf7'); eg.addColorStop(.6, '#ece2fb'); eg.addColorStop(1, '#c9b8ef');
+  g.fillStyle = eg; g.beginPath(); g.ellipse(0, -s * .25, s * .62, s * .78, 0, 0, TAU); g.fill(); outline(g, 'rgba(110,85,160,.6)', 1.6);
+  g.fillStyle = 'rgba(143,196,138,.75)'; [[-.25, -.5, .1], [.2, -.15, .08], [-.1, .1, .07], [.3, -.6, .06], [-.35, -.05, .06]].forEach(([a, b, c]) => { g.beginPath(); g.arc(a * s, b * s, c * s, 0, TAU); g.fill(); });
+  g.strokeStyle = 'rgba(90,70,120,.8)'; g.lineWidth = 1.4; g.lineJoin = 'round';
+  if (warm > .33) { g.beginPath(); g.moveTo(-s * .35, -s * .45); g.lineTo(-s * .2, -s * .35); g.lineTo(-s * .26, -s * .22); g.lineTo(-s * .1, -s * .14); g.stroke(); }
+  if (warm > .66) { g.beginPath(); g.moveTo(s * .4, -s * .1); g.lineTo(s * .22, -s * .02); g.lineTo(s * .3, s * .1); g.lineTo(s * .12, s * .2); g.stroke(); }
+  g.restore();
+  g.restore();
 }
 function drawThorn(g, th, t) {
   if (!th.alive && th.popT >= 1) return;
@@ -1165,6 +1270,8 @@ const Game = {
   moth: { x: 0, y: 0, tx: 0, ty: 0, blink: 1, blinkT: 1, rot: 0, on: false },
   nib: { x: 0, y: 0, out: 0, target: 0, peekT: 0, blink: 1, blinkT: 2, mood: 'awake', hop: 0, hopV: 0 },
   catches: 0, perfects: 0, sparksSaved: 0, tut: null, melody: MELODIES[0],
+  charge: 0, glowT: 0, shield: 0, beam: null, hatch: null, waitPowerT: 0, eggWob: 0,
+  dragon: { blink: 1, blinkT: 2, hop: 0, sneezeT: 4, pop: 1 },
   U: 0, field: null,
 };
 Game.layoutField = () => {
@@ -1200,8 +1307,10 @@ const ROUND1 = {
 // New ideas arrive one at a time: moonflower (2), lantern (4), bluebell (7), sleepy seeds (11), brambles (16).
 const NEW_THINGS = {
   2: { icon: '🌸', text: 'Moonflowers light up a huge area — catch everything that shimmers!' },
+  3: { icon: '🐾', text: 'Friends help! Catches fill Mochi’s ring — then tap Mochi (bottom right) for an extra spark.' },
   4: { icon: '🍄', text: 'Lantern mushrooms send their light extra far.' },
   7: { icon: '🔔', text: 'Bluebells ring twice: the second ring makes seeds shimmer.' },
+  8: { icon: '🥚', text: 'An egg is hiding on the hill. Catch seeds to keep it warm…' },
   11: { icon: '💤', text: 'Sleepy seeds wear nightcaps. They need two lights — or two taps.' },
   16: { icon: '🌿', text: 'Brambles block light. Bloom a flower next to one to clear it.' },
 };
@@ -1472,7 +1581,72 @@ Game.startLevel = function (L, opts) {
   Game.anyHint = false;
   if (first && Game.guided) { first.hint = true; Game.anyHint = true; }
   Game.state = L === 1 && !Game.daily && !st.rounds ? 'idle' : 'playing';
+  // friends: power starts empty, unless this level has beaten you twice — then your friend starts ready to help
+  Game.charge = 0; Game.glowT = 0; Game.shield = 0; Game.beam = null; Game.waitPowerT = 0; Game.noWait = false; Game.powerPaw = false;
+  // the egg appears from level 8 and hatches at the start of the level after it is warm enough
+  Game.hatch = null;
+  if (!Game.daily && !st.egg && Math.max(L, st.level || 1) >= 8) { st.egg = { warm: 0, hatched: false }; Store.save(); if (L !== 8) Game.eggNews = true; }
+  if (st.egg && !st.egg.hatched && st.egg.warm >= EGG_NEED) Game.hatch = { t: 0, done: false };
   UI.levelStart();
+  let helped = false;
+  if (Game.petsOn() && !Game.daily && (st.fails[L] || 0) >= 2) { Game.charge = 1; helped = true; UI.toast(`${petOf(st.pet).name} is ready to help! Tap them (bottom right) 🐾`, 3.2); }
+  if (Game.eggNews) { Game.eggNews = false; const lv = L; setTimeout(() => { if (Game.level === lv) UI.toast('🥚 An egg appeared on the hill! Catch seeds to keep it warm.', 3.5); }, helped ? 3400 : 0); }
+  UI.pet(true);
+};
+Game.petsOn = () => !Game.daily ? Math.max(Game.level, Store.get().level || 1) >= 3 : (Store.get().level || 1) >= 3;
+Game.eggSpot = () => [W * .6, Scene.midY + H * .016];
+Game.addCharge = function (v) {
+  if (!Game.petsOn() || Game.charge >= 1) return;
+  const st = Store.get(); Game.charge = Math.min(1, Game.charge + v * (st.pet === 'dragon' ? .7 : 1));
+  if (Game.charge >= 1) {
+    Audio.star(1); Haptics.buzz([20, 40, 20]);
+    if (!st.seen.powerTut) { UI.toast(`${petOf(st.pet).name}'s power is ready! Tap ${petOf(st.pet).name} 🐾`, 3); Game.powerPaw = true; }
+  }
+  UI.pet();
+};
+Game.usePower = function () {
+  const st = Store.get(), id = st.pet;
+  if (Game.charge < 1) return false;
+  if (Game.state !== 'playing') return false;
+  const sleeping = Game.seeds.filter(o => o.state === 'sleep');
+  if ((id === 'pip' || id === 'dragon' || id === 'nib') && !sleeping.length) { UI.toast('Nothing left to wake — save it for next time!'); return false; }
+  Game.charge = 0; Game.powerPaw = false; Game.waitPowerT = 0; st.seen.powerTut = true; Store.save(); UI.pet();
+  Haptics.buzz([30, 40, 60]); Audio.praise(2);
+  const m = Game.mochi; m.mood = 'happy'; m.happyT = 1.4; m.hopV = -260;
+  if (id === 'mochi') {
+    Game.sparks++; UI.sparks(); UI.hideIntro();
+    Game.floats.push({ x: m.x, y: m.y - Game.U * .12, text: '+1 spark!', t: 0, label: true, big: true, col: '#ffe59a' });
+    for (let i = 0; i < 12; i++) Game.sparkles.push({ x: m.x, y: m.y, vx: (Math.random() - .5) * 160, vy: -80 - Math.random() * 120, t: 0, life: 1 + Math.random() * .5, s: 2 + Math.random() * 2 });
+  } else if (id === 'pip') {
+    let best = null, bv = -1; for (const o of sleeping) { if (o.dozy) continue; const v = Game.reach(o, Game.seeds); if (v > bv) { bv = v; best = o; } }
+    best = best || sleeping[0];
+    best.golden = true; best.pal = PALETTES[2]; best.hint = true; Game.anyHint = true;
+    const pp = Game.pip; pp.seed = best; pp.k = 0; pp.target = 1; pp.earWave = true; pp.waveT = 2;
+    Game.paw = { s: best }; Game.idleT = 99;
+    Game.floats.push({ x: best.x, y: best.y - best.r * 2.6, text: 'Lucky seed!', t: 0, label: true, big: true, col: '#ffe59a' });
+    Audio.creature();
+  } else if (id === 'moth') {
+    Game.glowT = 5; Game.moth.on = true;
+    for (const o of sleeping) if (o.catchT > 0) o.catchT = Math.max(o.catchT, .95);
+    UI.toast('🌙 Moonglow — time slows down', 1.8);
+  } else if (id === 'nib') {
+    Game.shield = 3; Game.nibPeek(999, 'happy'); Game.nib.hopV = -160;
+    UI.toast('🐚 Nib will catch the next 3 seeds you miss', 2);
+  } else if (id === 'dragon') {
+    Game.dragonBreath();
+  }
+  return true;
+};
+// Sprig flies across the garden along the line that crosses the most sleeping seeds, waking everything in its beam.
+Game.dragonBreath = function () {
+  const stage = Store.get().dragon.stage, band = Game.U * (.075 + .025 * stage);
+  const sleeping = Game.seeds.filter(o => o.state === 'sleep');
+  let by = sleeping[0].y, bc = -1;
+  for (const a of sleeping) { const c = sleeping.filter(o => Math.abs(o.y - a.y) < band).length; if (c > bc) { bc = c; by = a.y; } }
+  const dir = Math.random() < .5 ? 1 : -1;
+  Game.beam = { y: by, band, dir, x: dir > 0 ? -60 : W + 60, hit: new Set() };
+  if (!Game.chainActive) { Game.chain = 0; Game.chainActive = true; Game.settleT = 0; UI.hideIntro(); }
+  Audio.whoosh(); Audio.moon();
 };
 Game.newRound = () => Game.startLevel(Game.level, { daily: Game.daily });   // replay the current garden
 
@@ -1487,6 +1661,11 @@ Game.tapAt = function (x, y) {
   Audio.unlock();
   const s = Game.hitSeed(x, y);
   Game.idleT = 0; Game.paw = null;
+  const st0 = Store.get();
+  if (!s && st0.egg && !st0.egg.hatched) {
+    const [ex, ey] = Game.eggSpot();
+    if (dist(x, y, ex, ey) < Math.max(30, Game.U * .08)) { Game.eggWob = .6; Audio.drop(3); Haptics.buzz(12); UI.toast(`🥚 It's warm… ${Math.min(100, Math.round(st0.egg.warm / EGG_NEED * 100))}% — catch seeds to warm it`, 2.4, true); return; }
+  }
   if (!s) {
     const th = Game.thorns.find(t => t.alive && dist(x, y, t.x, t.y) < Math.max(t.r * 1.4, 28));
     if (th) { th.hitT = .35; Audio.nope(); Haptics.buzz(8); if (!Game.thornHinted) { Game.thornHinted = true; UI.toast('Brambles block light — bloom a flower next to one 🌿', 2.8); } return; }
@@ -1529,6 +1708,7 @@ Game.catchSeed = function (s) {
   const perfect = s.catchT <= PERFECT_AT;
   s.catchT = 0; s.state = 'bud'; s.bloomAt = .05; s.pressT = .001; s.caught = true; s.perfect = perfect;
   Game.catches++; if (perfect) Game.perfects++;
+  Game.addCharge(perfect ? .4 : .25);
   Game.settleT = 0;
   Audio.catch(perfect); Haptics.buzz(perfect ? [12, 40, 24] : 18);
   Game.floats.push({ x: s.x, y: s.y - s.r * 2.6, text: perfect ? 'Perfect!' : 'Caught!', t: 0, big: perfect, label: true, col: perfect ? '#ffd6e8' : '#effff0' });
@@ -1581,7 +1761,7 @@ Game.bloom = function (s) {
   Game.score += pts;
   Game.floats.push({ x: s.x, y: s.y - s.r * 1.4, text: '+' + pts, t: 0, big: pts >= 10, col: s.type === 'moon' ? '#fff2c4' : s.golden || s.perfect ? '#ffe59a' : '#fff' });
   UI.score(); UI.chain(Game.chain);
-  if (PRAISE[Game.chain]) { const lvl = Object.keys(PRAISE).indexOf(String(Game.chain)); UI.praise(PRAISE[Game.chain], lvl); Audio.praise(lvl); Haptics.buzz([20, 50, 30]); }
+  if (PRAISE[Game.chain]) { Game.addCharge(.15); const lvl = Object.keys(PRAISE).indexOf(String(Game.chain)); UI.praise(PRAISE[Game.chain], lvl); Audio.praise(lvl); Haptics.buzz([20, 50, 30]); }
   // pulse ring: wakes everything within R, then keeps travelling to R × WAVE_REACH where seeds can be caught
   const R = Game.radiusFor(s.type) * (s.perfect ? 1.2 : 1);
   Game.pulses.push({ x: s.x, y: s.y, r: 0, R, out: R * Game.reachFor(s.type), t: 0, dur: s.type === 'moon' ? 1.5 : s.type === 'lantern' ? 1.1 : .95, big: s.type === 'moon' || s.perfect });
@@ -1612,7 +1792,7 @@ Game.bloom = function (s) {
   if (s.type === 'moon') Game.magicMoment(s);
 };
 Game.magicMoment = function (s) {
-  Game.moons++;
+  Game.moons++; Game.addCharge(.2);
   if (!REDUCED) { Game.timeScale = .3; Game.slowT = 1.1; Game.cam = { k: 1, x: s.x, y: s.y }; }
   Game.mochi.mood = 'wow'; Game.mochi.wowT = 2; Game.mochi.hopV = -300;
   Game.pip.seed = s; Game.pip.target = 1; Game.pip.earWave = true; Game.pip.waveT = 2.2;
@@ -1625,8 +1805,10 @@ Game.magicMoment = function (s) {
 // ----------------------------------------------------------------- Update
 Game.update = function (dt, t) {
   // slow-motion recovery
+  if (Game.glowT > 0) Game.glowT -= dt;
   if (Game.tut && (Game.tut.state !== 'sleep' || Game.state !== 'playing')) Game.tut = null;   // the chain woke it by itself: wait for the next one
   if (Game.tut) Game.timeScale = lerp(Game.timeScale, .3, 1 - Math.pow(.0005, dt));
+  else if (Game.glowT > 0 && Game.chainActive) Game.timeScale = lerp(Game.timeScale, .45, 1 - Math.pow(.001, dt));
   else if (Game.slowT > 0) { Game.slowT -= dt; if (Game.slowT <= 0) Game.slowT = 0; Game.timeScale = lerp(Game.timeScale, Game.slowT > 0 ? .3 : 1, 1 - Math.pow(.001, dt)); }
   else if (Game.timeScale < 1) Game.timeScale = Math.min(1, Game.timeScale + dt * 1.6);
   if (Game.cam.k > 0 && Game.slowT <= 0) Game.cam.k = Math.max(0, Game.cam.k - dt * 1.4);
@@ -1636,7 +1818,14 @@ Game.update = function (dt, t) {
     if (s.nopeT > 0) s.nopeT = Math.max(0, s.nopeT - dt);
     if (s.grumpyT > 0) s.grumpyT = Math.max(0, s.grumpyT - dt);
     if (s.state === 'bud') { pending = true; s.bloomAt -= gdt; if (s.pressT > 0) s.pressT += gdt; if (s.bloomAt <= 0) Game.bloom(s); }
-    else if (s.state === 'sleep' && s.catchT > 0) { pending = true; s.catchT -= gdt / Game.catchWin; if (s.catchT <= 0) { s.catchT = 0; if (Game.tut === s) Game.endTut(false); } }
+    else if (s.state === 'sleep' && s.catchT > 0) { pending = true; s.catchT -= gdt / Game.catchWin; if (s.catchT <= 0) {
+      s.catchT = 0;
+      if (Game.shield > 0 && Game.chainActive) {   // Nib's shell shield catches a seed you missed
+        Game.shield--; s.catchT = .5; Game.catchSeed(s);
+        Game.floats.push({ x: s.x, y: s.y - s.r * 3.6, text: 'Nib saved it!', t: 0, label: true, col: '#e8dfff' });
+        if (!Game.shield) Game.nibPeek(1.2, 'happy');
+      } else if (Game.tut === s) Game.endTut(false);
+    } }
     else if (s.state === 'bloom') { s.bloomK = Math.min(1.6, s.bloomK + gdt * 2.4); s.tapScale += (1 - s.tapScale) * (1 - Math.pow(.0005, dt)); s.spin *= Math.pow(.02, dt); }
   }
   for (let i = Game.pulses.length - 1; i >= 0; i--) {
@@ -1653,6 +1842,32 @@ Game.update = function (dt, t) {
     if (p.t < 1 && p.out) pending = true;
     if (p.t >= 1) Game.pulses.splice(i, 1);
   }
+  if (Game.beam) {   // Sprig's moon-breath sweeps across the garden
+    const b = Game.beam; pending = true; b.x += b.dir * 620 * dt;
+    for (const o of Game.seeds) {
+      if (o.state !== 'sleep' || b.hit.has(o) || Math.abs(o.y - b.y) > b.band) continue;
+      if ((b.dir > 0 && o.x <= b.x) || (b.dir < 0 && o.x >= b.x)) { b.hit.add(o); o.dozy = false; o.catchT = 0; o.state = 'bud'; o.bloomAt = .04; }
+    }
+    for (const th of Game.thorns) if (th.alive && !th.popAt && Math.abs(th.y - b.y) < b.band + th.r && ((b.dir > 0 && th.x <= b.x) || (b.dir < 0 && th.x >= b.x))) th.popAt = .05;
+    if (!REDUCED && Math.random() < .6) Game.sparkles.push({ x: b.x - b.dir * 20, y: b.y + (Math.random() - .5) * b.band * 1.6, vx: -b.dir * 40, vy: -20 - Math.random() * 40, t: 0, life: .8 + Math.random() * .5, s: 2 + Math.random() * 2.5 });
+    if (b.x < -80 || b.x > W + 80) Game.beam = null;
+  }
+  if (Game.waitPowerT > 0 && !Game.chainActive) { Game.waitPowerT -= dt; if (Game.waitPowerT <= 0) { Game.noWait = true; Game.powerPaw = false; Game.chainEnd(); } }
+  if (Game.hatch && !Game.hatch.done) {
+    const h = Game.hatch; if (!UI.el.intro.classList.contains('show') && Game.state === 'playing') h.t += dt;   // hatch once the banner is out of the way
+    if (h.t >= 1.8) {   // crack! a baby moss dragon
+      h.done = true; const st = Store.get(); st.egg.hatched = true; st.pet = 'dragon'; st.dragon = { xp: 0, stage: 1 }; Store.save();
+      const [ex, ey] = Game.eggSpot(); Game.dragon.pop = 0;
+      Game.puff(ex, ey, 18, '#f4ecff'); Game.puff(ex, ey, 10, '#c9b8ef');
+      for (let i = 0; i < 20; i++) Game.sparkles.push({ x: ex, y: ey, vx: (Math.random() - .5) * 200, vy: -60 - Math.random() * 150, t: 0, life: 1.2 + Math.random() * .6, s: 2 + Math.random() * 3 });
+      Audio.creature(); Audio.praise(3); Haptics.buzz([40, 50, 40, 50, 120]);
+      UI.toast('🐉 The egg hatched! Meet Sprig, your baby moss dragon', 3.8, true); UI.pet(true);
+    }
+  }
+  if (Game.eggWob > 0) Game.eggWob = Math.max(0, Game.eggWob - dt);
+  const dg = Game.dragon; dg.pop = Math.min(1, dg.pop + dt * 1.6);
+  dg.blinkT -= dt; if (dg.blinkT <= 0) { dg.blinkT = 2.5 + Math.random() * 3; dg.blinkAnim = .2; }
+  if (dg.blinkAnim > 0) { dg.blinkAnim -= dt; dg.blink = Math.abs(Math.sin(dg.blinkAnim / .2 * Math.PI)); } else dg.blink = 1;
   for (const th of Game.thorns) {
     if (th.hitT > 0) th.hitT = Math.max(0, th.hitT - dt);
     if (th.alive && th.popAt > 0) { th.popAt -= gdt; pending = true; if (th.popAt <= 0) Game.popThorn(th); }
@@ -1692,6 +1907,10 @@ Game.chainEnd = function () {
     Audio.full(Game.chain); Haptics.buzz([30, 60, 30, 60, 90]); Game.nibPeek(3, 'happy'); Game.nib.hopV = -180; Game.pip.earWave = true; Game.pip.waveT = 2;
     Game.state = 'ending'; Game.endT = 2.1; return;
   }
+  if (Game.sparks <= 0 && !Game.noWait && Game.charge >= 1 && Game.petsOn() && ['mochi', 'dragon'].includes(Store.get().pet)) {
+    const nm = petOf(Store.get().pet).name;
+    UI.toast(`Out of sparks — tap ${nm} to keep going! 🐾`, 3); Game.waitPowerT = 6; Game.powerPaw = true; return;
+  }
   if (Game.sparks <= 0) {
     Game.state = 'ending'; Game.endT = 1.1;
     if (sleeping.length <= 2) {   // near miss: show exactly what was left
@@ -1720,7 +1939,9 @@ Game.next = function () {   // the big button on the results card
 // The paw: a soft pointer that shows exactly what to tap. Early levels and the first level of each session
 // get it straight away; later it only appears if the player seems unsure (idle for a while).
 Game.updatePaw = function (dt) {
-  if (!(Game.state === 'playing' || Game.state === 'idle') || Album.isOpen() || MapView.isOpen()) { Game.paw = null; return; }
+  if (!(Game.state === 'playing' || Game.state === 'idle') || Album.isOpen() || MapView.isOpen() || PetsView.isOpen()) { Game.paw = null; return; }
+  if (Game.powerPaw && Game.charge >= 1) { const r = $('petBtn').getBoundingClientRect(); Game.paw = { pt: [r.left + r.width / 2 - 8, r.top + r.height / 2 - 10] }; return; }
+  if (Game.paw && Game.paw.pt) Game.paw = null;
   if (Game.chainActive) {
     Game.idleT = 0;
     if (Game.guided && Game.level <= 3 && !Game.tut) {   // early levels: point at a seed you can catch right now
@@ -1778,6 +1999,17 @@ function render(t) {
   ctx.drawImage(Scene.bg, 0, 0, W, H);
   drawSkyLife(t);
   drawWater(t);
+  const est = Store.get();
+  if (est.egg) {   // the egg (and later Sprig) lives on the hill below the cottage
+    const [ex, ey] = Game.eggSpot();
+    if (!est.egg.hatched || (Game.hatch && !Game.hatch.done)) drawEgg(ctx, ex, ey, Game.U * .05, Math.min(1, est.egg.warm / EGG_NEED), t, Game.hatch ? Math.min(1, Game.hatch.t / 1.8) : Game.eggWob);
+    else if (!Game.beam) {
+      const dg = Game.dragon, k = ease.outBack(dg.pop), sel = est.pet === 'dragon';
+      ctx.save(); ctx.translate(ex, ey + Game.U * .03); ctx.scale(k, k);
+      Chars.dragon(ctx, 0, 0, Game.U * .05 * (1 + (est.dragon.stage - 1) * .15), { stage: est.dragon.stage, mood: sel ? (Game.chainActive ? 'happy' : 'awake') : 'sleep', blink: dg.blink, hop: sel && !REDUCED ? -Math.abs(Math.sin(t * 2.5)) * 2 : 0 }, t);
+      ctx.restore();
+    }
+  }
   drawGrass(t, Game.pulses);
   // pulses (light waves through the grass)
   for (const p of Game.pulses) {
@@ -1808,7 +2040,15 @@ function render(t) {
   ctx.restore();
   drawAir(t, 1 / 60);
   if (Game.moth.on) Chars.moth(ctx, Game.moth.x, Game.moth.y, Game.U * .045, Game.moth, t);
-  if (Game.paw && Game.paw.s.state === 'sleep') drawPaw(ctx, Game.paw.s.x, Game.paw.s.y, t);
+  if (Game.beam) {   // light ribbon + Sprig flying with its mouth open
+    const b = Game.beam, tail = 320 * b.dir;
+    const gr = ctx.createLinearGradient(b.x - tail, 0, b.x, 0); gr.addColorStop(0, 'rgba(255,240,190,0)'); gr.addColorStop(1, 'rgba(255,240,190,.55)');
+    ctx.save(); ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(b.x - tail / 2, b.y, Math.abs(tail) / 2, b.band, 0, 0, TAU); ctx.fill(); ctx.restore();
+    Chars.dragon(ctx, b.x, b.y - Game.U * .09, Game.U * .07, { stage: Store.get().dragon.stage, mood: 'happy', flying: true, breath: true, flip: b.dir < 0, rot: b.dir * .12 }, t);
+  }
+  if (Game.glowT > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, Game.glowT) * .18; ctx.fillStyle = '#c9b8ef'; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  if (Game.shield > 0 && Scene.pond) { const nb = Game.nib; ctx.save(); ctx.strokeStyle = 'rgba(200,185,255,.8)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(nb.x, nb.y - Game.U * .03, Game.U * .07 + Math.sin(t * 4) * 2, 0, TAU); ctx.stroke(); ctx.fillStyle = '#fff4e1'; ctx.font = `900 13px ${FONT}`; ctx.textAlign = 'center'; ctx.fillText('×' + Game.shield, nb.x + Game.U * .07, nb.y - Game.U * .09); ctx.restore(); }
+  if (Game.paw) { const pp = Game.paw.pt || (Game.paw.s && Game.paw.s.state === 'sleep' ? [Game.paw.s.x, Game.paw.s.y] : null); if (pp) drawPaw(ctx, pp[0], pp[1], t); }
   // floating score numbers
   ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   for (const f of Game.floats) { const k = f.t / 1.1; const y = f.y - ease.outCubic(k) * 34; ctx.globalAlpha = k < .7 ? 1 : 1 - (k - .7) / .3; ctx.font = `900 ${f.label ? (f.big ? 24 : 19) : f.big ? 22 : 17}px ${FONT}`; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(70,45,90,.55)'; ctx.lineJoin = 'round'; ctx.strokeText(f.text, f.x, y); ctx.fillStyle = f.col; ctx.fillText(f.text, f.x, y); }
@@ -1830,6 +2070,9 @@ const STICKERS = [
   { id: 'moth_twirl',   who: 'moth',  name: 'Moon Moth · Twirl',   how: '5 Perfect catches in one garden',  test: r => r.perfects >= 5,                pose: { rot: .55 } },
   { id: 'nib_shy',      who: 'nib',   name: 'Nib · Shy',           how: 'Catch a seed on the wave',         test: r => r.catches >= 1,                 pose: { out: .3, lookX: .6 } },
   { id: 'nib_hello',    who: 'nib',   name: 'Nib · Hello',         how: 'Catch 6 seeds in one garden',      test: r => r.catches >= 6,         pose: { out: 1, mood: 'happy' } },
+  { id: 'dragon_hatch', who: 'dragon', name: 'Sprig · Hatchling',  how: 'Hatch the egg on the hill',        test: (r, st) => !!(st.egg && st.egg.hatched), pose: { stage: 1, mood: 'wow' } },
+  { id: 'dragon_young', who: 'dragon', name: 'Sprig · Fledgling',  how: 'Grow Sprig with 12 stars',         test: (r, st) => st.dragon.stage >= 2,    pose: { stage: 2, mood: 'happy' } },
+  { id: 'dragon_moon',  who: 'dragon', name: 'Sprig · Moon Dragon', how: 'Grow Sprig with 36 stars',        test: (r, st) => st.dragon.stage >= 3,    pose: { stage: 3 } },
   { id: 'nib_moon',     who: 'nib',   name: 'Nib · Moon-shell',    how: 'Full bloom with 1 spark, 3 times', test: (r, st) => st.oneSpark >= 3,         pose: { out: 1, moon: true } },
 ];
 function drawSticker(c, stk, locked) {
@@ -1838,6 +2081,7 @@ function drawSticker(c, stk, locked) {
   if (stk.who === 'mochi') Chars.mochi(g, S * .5, S * .6, S * .26, st, t);
   else if (stk.who === 'pip') Chars.pip(g, S * .5, S * .64, S * .25, st, t);
   else if (stk.who === 'moth') Chars.moth(g, S * .5, S * .5, S * .24, st, t);
+  else if (stk.who === 'dragon') Chars.dragon(g, S * .5, S * .6, S * .25, st, t);
   else Chars.nib(g, S * .42, S * .7, S * .38, st, t);
   if (locked) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(80,66,104,.82)'; g.fillRect(0, 0, S, S); g.globalCompositeOperation = 'source-over'; }
 }
@@ -1866,6 +2110,46 @@ const Album = {
     ($('results').classList.contains('show') ? $('albumBtn') : canvas).focus({ preventScroll: true });
   },
   isOpen: () => $('album').classList.contains('show'),
+};
+
+// ----------------------------------------------------------------- Friends (pet companions with one power each)
+const EGG_NEED = 60;
+const DRAGON_STAGES = ['Hatchling', 'Fledgling', 'Moon Dragon'];
+const PETS = [
+  { id: 'mochi',  name: 'Mochi',     power: 'Spark roll',   text: 'Rolls you an extra spark.', has: () => true },
+  { id: 'pip',    name: 'Pip',       power: 'Lucky peek',   text: 'Hops to the best seed and makes it golden: double points.', has: st => !!st.unlocks.pip, how: 'Open a moonflower to meet Pip.' },
+  { id: 'moth',   name: 'Moon Moth', power: 'Moonglow',     text: 'Slows time for a few seconds, so catching is easy.', has: st => !!st.unlocks.moth, how: 'Collect 500 moon-drops to wake her.' },
+  { id: 'nib',    name: 'Nib',       power: 'Shell shield', text: 'Catches the next 3 seeds you would have missed.', has: st => !!st.stickers.nib_shy, how: 'Catch a seed on the wave.' },
+  { id: 'dragon', name: 'Sprig',     power: 'Moon-breath',  text: 'Flies across the garden breathing light that wakes every seed in its path.', has: st => !!(st.egg && st.egg.hatched), how: 'Hatch the egg on the hill (from level 8).' },
+];
+const petOf = id => PETS.find(p => p.id === id) || PETS[0];
+function drawPet(c, id, locked, t) {
+  const st = Store.get();
+  const pose = { mochi: { mood: 'happy' }, pip: { mood: 'awake', lookX: .4 }, moth: {}, nib: { out: 1, mood: 'happy' }, dragon: { stage: st.dragon.stage, mood: 'happy' } }[id];
+  drawSticker(c, { who: id, pose }, locked);
+}
+const PetsView = {
+  open() {
+    const st = Store.get(), list = $('petList'); list.innerHTML = '';
+    for (const pt of PETS) {
+      const has = pt.has(st), b = document.createElement('button'); b.className = 'pet-card' + (st.pet === pt.id ? ' sel' : '') + (has ? '' : ' locked'); b.disabled = !has;
+      const c = document.createElement('canvas'); c.width = c.height = 116; c.setAttribute('aria-hidden', 'true'); drawPet(c, pt.id, !has, 1.2); b.appendChild(c);
+      const txt = document.createElement('span');
+      const nm = pt.id === 'dragon' && has ? `${pt.name} · ${DRAGON_STAGES[st.dragon.stage - 1]}` : has ? pt.name : '???';
+      txt.innerHTML = `<span class="pn"></span><span class="pp"></span><span class="pt"></span>`;
+      txt.querySelector('.pn').textContent = nm + (st.pet === pt.id ? '  ✓' : '');
+      txt.querySelector('.pp').textContent = has ? '✨ ' + pt.power : '';
+      txt.querySelector('.pt').textContent = has ? pt.text : pt.how;
+      b.appendChild(txt);
+      b.setAttribute('aria-label', has ? `${nm}. ${pt.power}: ${pt.text}${st.pet === pt.id ? ' Selected.' : ''}` : `Locked friend. ${pt.how}`);
+      if (has) b.addEventListener('click', () => { st.pet = pt.id; Store.save(); UI.pet(true); PetsView.close(); UI.toast(`${pt.name} is helping you now 🐾`); });
+      list.appendChild(b);
+    }
+    const v = $('pets'); v.classList.add('show'); v.setAttribute('aria-hidden', 'false');
+    setTimeout(() => (list.querySelector('.sel') || $('petsClose')).focus({ preventScroll: true }), 50);
+  },
+  close() { const v = $('pets'); v.classList.remove('show'); v.setAttribute('aria-hidden', 'true'); $('petBtn').focus({ preventScroll: true }); },
+  isOpen: () => $('pets').classList.contains('show'),
 };
 
 // ----------------------------------------------------------------- UI
@@ -1919,6 +2203,7 @@ const UI = {
     else { UI.hideInvite(); UI.el.sparks.classList.add('show'); UI.showIntro(); }
     if (Album.isOpen()) Album.close();
     if (MapView.isOpen()) MapView.close(true);
+    if (PetsView.isOpen()) PetsView.close();
     canvas.focus({ preventScroll: true });
   },
   showIntro() {
@@ -1934,6 +2219,15 @@ const UI = {
     UI.el.intro.classList.add('show');
   },
   hideIntro() { UI.el.intro.classList.remove('show'); },
+  pet(redraw) {
+    const b = $('petBtn'), st = Store.get(), on = Game.petsOn();
+    b.hidden = !on; if (!on) return;
+    const pt = petOf(st.pet), key = st.pet + st.dragon.stage;
+    if (redraw || UI.petKey !== key) { UI.petKey = key; drawPet($('petCanvas'), st.pet, false, 1.2); }
+    $('petRing').style.strokeDashoffset = (182.2 * (1 - Game.charge)).toFixed(1);
+    b.classList.toggle('ready', Game.charge >= 1);
+    b.setAttribute('aria-label', Game.charge >= 1 ? `${pt.name}'s power is ready: ${pt.power}. Tap to use.` : `${pt.name}, power ${Math.round(Game.charge * 100)}% charged. Tap to choose a friend.`);
+  },
   hideInvite() { UI.el.invite.classList.remove('show'); UI.el.invite.setAttribute('aria-hidden', 'true'); UI.el.sparks.classList.add('show'); },
   score(reset) {
     UI.el.score.textContent = Game.score;
@@ -1949,8 +2243,9 @@ const UI = {
   },
   sparks() {
     const el = UI.el.sparks; el.querySelectorAll('.spark').forEach(e => e.remove());
-    for (let i = 0; i < 3; i++) { const d = document.createElement('span'); d.className = 'spark' + (i >= Game.sparks ? ' used' : ''); el.appendChild(d); }
-    el.setAttribute('aria-label', Game.sparks + ' of 3 sparks left');
+    const n = Math.max(3, Game.sparks);
+    for (let i = 0; i < n; i++) { const d = document.createElement('span'); d.className = 'spark' + (i >= Game.sparks ? ' used' : ''); el.appendChild(d); }
+    el.setAttribute('aria-label', Game.sparks + ' sparks left');
   },
   chain(n) {
     if (n < 2) return;
@@ -1964,7 +2259,7 @@ const UI = {
     const m = Game.mochi; m.mood = 'happy'; m.happyT = 1.2; m.hopV = -240 - lvl * 20;
     if (!REDUCED && Game.lastBloom) for (let i = 0; i < 10 + lvl * 4; i++) Game.sparkles.push({ x: Game.lastBloom.x, y: Game.lastBloom.y, vx: (Math.random() - .5) * 220, vy: -60 - Math.random() * 160, t: 0, life: 1 + Math.random() * .7, s: 2 + Math.random() * 2.5 });
   },
-  toast(msg, dur = 2.2) { UI.el.toast.textContent = msg; UI.el.toast.classList.add('show'); UI.toastT = dur; },
+  toast(msg, dur = 2.2, low) { UI.el.toast.textContent = msg; UI.el.toast.classList.toggle('low', !!low); UI.el.toast.classList.add('show'); UI.toastT = dur; },
   tick(dt) {
     if (UI.toastT > 0) { UI.toastT -= dt; if (UI.toastT <= 0) UI.el.toast.classList.remove('show'); }
     if (UI.chainT > 0) { UI.chainT -= dt; if (UI.chainT <= 0 && !Game.chainActive) UI.chainHide(); }
@@ -1985,6 +2280,17 @@ const UI = {
       st.lvlBest[L] = Math.max(prev, Game.score); levelBest = st.lvlBest[L];
       st.stars[L] = Math.max(st.stars[L] || 0, stars);
       if (passed && (st.level || 1) <= L) st.level = L + 1;
+      if (passed) delete st.fails[L]; else st.fails[L] = (st.fails[L] || 0) + 1;
+    }
+    // the egg warms with every catch and star; Sprig grows with stars once hatched
+    let eggNote = null;
+    if (st.egg && !st.egg.hatched) {
+      st.egg.warm += Game.catches + Game.perfects + (Game.fullBloom ? 5 : 0) + stars * 2;
+      if (st.egg.warm >= EGG_NEED) eggNote = { id: 'egg', text: 'Your egg is wobbling… it will hatch next level! 🥚' };
+    } else if (st.egg && st.egg.hatched && passed) {
+      const before = st.dragon.stage; st.dragon.xp += stars;
+      st.dragon.stage = st.dragon.xp >= 36 ? 3 : st.dragon.xp >= 12 ? 2 : 1;
+      if (st.dragon.stage > before) eggNote = { id: 'dragon', text: `Sprig grew into a ${DRAGON_STAGES[st.dragon.stage - 1]}! Its beam is wider now.` };
     }
     // milestone unlocks
     const MIL = [
@@ -1993,7 +2299,7 @@ const UI = {
       { id: 'cottage', name: 'Cottage lights', need: 1500, of: () => st.drops, unit: 'moon-drops', text: 'Someone lit the cottage windows. The garden feels like home.' },
       { id: 'meadow', name: 'Moonlit meadow', need: 4000, of: () => st.drops, unit: 'moon-drops', text: 'Four thousand moon-drops. The whole meadow remembers you.' },
     ];
-    let unlocked = Game.unlockedThisRound;
+    let unlocked = eggNote || Game.unlockedThisRound;
     for (const mi of MIL) { if (!st.unlocks[mi.id] && mi.of() >= mi.need) { st.unlocks[mi.id] = true; if (!unlocked) unlocked = { id: mi.id, text: mi.text }; Audio.milestone(); } }
     if (Game.fullBloom) { st.fulls = (st.fulls || 0) + 1; if (Game.sparksSaved >= 2) st.oneSpark = (st.oneSpark || 0) + 1; }
     const r = { bestChain: Game.bestChain, moons: Game.moons, full: Game.fullBloom, perfects: Game.perfects, catches: Game.catches, saved: Game.sparksSaved };
@@ -2034,7 +2340,9 @@ const UI = {
     $('albumDot').classList.toggle('show', Object.keys(st.stickerNew).length > 0);
     $('foot').textContent = '♪ ' + Game.melody.name + ' · ' + Object.keys(st.stickers).length + '/' + STICKERS.length + ' stickers';
     const next = MIL.find(mi => !st.unlocks[mi.id]);
-    if (next) { $('goalName').textContent = 'Next: ' + next.name; $('goalProg').textContent = Math.min(next.of(), next.need) + ' / ' + next.need + ' ' + next.unit; requestAnimationFrame(() => $('goalBar').style.width = Math.min(100, next.of() / next.need * 100) + '%'); }
+    if (st.egg && !st.egg.hatched) { $('goalName').textContent = '🥚 Egg warmth'; $('goalProg').textContent = Math.min(100, Math.round(st.egg.warm / EGG_NEED * 100)) + '%'; requestAnimationFrame(() => $('goalBar').style.width = Math.min(100, st.egg.warm / EGG_NEED * 100) + '%'); }
+    else if (st.egg && st.dragon.stage < 3) { const need = st.dragon.stage === 1 ? 12 : 36; $('goalName').textContent = '🐉 Sprig grows'; $('goalProg').textContent = st.dragon.xp + ' / ' + need + ' stars'; requestAnimationFrame(() => $('goalBar').style.width = Math.min(100, st.dragon.xp / need * 100) + '%'); }
+    else if (next) { $('goalName').textContent = 'Next: ' + next.name; $('goalProg').textContent = Math.min(next.of(), next.need) + ' / ' + next.need + ' ' + next.unit; requestAnimationFrame(() => $('goalBar').style.width = Math.min(100, next.of() / next.need * 100) + '%'); }
     else { $('goalName').textContent = 'Total moon-drops'; $('goalProg').textContent = st.drops; requestAnimationFrame(() => $('goalBar').style.width = '100%'); }
     // buttons: one obvious next step
     $('againBtn').textContent = Game.daily ? `Back to level ${st.level} ▶` : passed ? `Next level ▶` : 'Try again ↻';
@@ -2048,6 +2356,8 @@ const UI = {
   drawUnlockIcon(id) {
     const c = $('unlockCanvas'); const g = c.getContext('2d'); g.setTransform(2, 0, 0, 2, 0, 0); g.clearRect(0, 0, 46, 46);
     if (id === 'pip') Chars.pip(g, 23, 26, 13, { mood: 'happy', blink: 1 }, 0);
+    else if (id === 'egg') drawEgg(g, 23, 30, 13, 1, 0, 0);
+    else if (id === 'dragon') Chars.dragon(g, 23, 27, 12, { stage: Store.get().dragon.stage, mood: 'happy' }, 0);
     else if (id === 'moth') Chars.moth(g, 23, 23, 12, { blink: 1 }, 1.2);
     else if (id === 'golden') drawFlower(g, { x: 23, y: 23, r: 13, bloomK: 1, pal: PALETTES[2], golden: true, type: 'seed', ph: 0 }, 0);
     else Chars.mochi(g, 23, 25, 13, { mood: 'happy', blink: 1 }, 0);
@@ -2071,7 +2381,7 @@ function frame(ts) {
   if (!lastT) lastT = ts;
   let dt = (ts - lastT) / 1000; lastT = ts; dt = Math.min(dt, .05); // clamp after tab switches
   gameT += dt;
-  if (!(MapView.isOpen() || Album.isOpen())) Game.update(dt, gameT);   // overlays pause the garden
+  if (!(MapView.isOpen() || Album.isOpen() || PetsView.isOpen())) Game.update(dt, gameT);   // overlays pause the garden
   UI.tick(dt);
   render(gameT);
 }
@@ -2084,7 +2394,8 @@ canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 // keyboard: arrows cycle sleeping seeds, Enter/Space blooms, R new garden, M mute
 canvas.addEventListener('keydown', e => {
-  if (Album.isOpen() || MapView.isOpen()) return;
+  if (Album.isOpen() || MapView.isOpen() || PetsView.isOpen()) return;
+  if (e.key.toLowerCase() === 'p') { $('petBtn').click(); return; }
   const sleeping = Game.seeds.map((s, i) => [s, i]).filter(([s]) => s.state === 'sleep').map(([, i]) => i);
   if (['ArrowRight', 'ArrowDown', 'Tab'].includes(e.key) && !e.shiftKey && sleeping.length) { e.preventDefault(); const k = sleeping.indexOf(Game.focus); Game.focus = sleeping[(k + 1) % sleeping.length]; }
   else if (['ArrowLeft', 'ArrowUp'].includes(e.key) || (e.key === 'Tab' && e.shiftKey)) { if (!sleeping.length) return; e.preventDefault(); const k = sleeping.indexOf(Game.focus); Game.focus = sleeping[(k - 1 + sleeping.length) % sleeping.length]; }
@@ -2099,6 +2410,9 @@ canvas.addEventListener('keydown', e => {
 });
 $('muteBtn').addEventListener('click', () => { Audio.unlock(); UI.setMuted(!Audio.muted); });
 $('mapBtn').addEventListener('click', () => { Audio.unlock(); MapView.open(); });
+$('petBtn').addEventListener('click', () => { Audio.unlock(); if (Game.charge >= 1 && Game.state === 'playing') Game.usePower(); else PetsView.open(); });
+$('petsClose').addEventListener('click', () => PetsView.close());
+$('pets').addEventListener('click', e => { if (e.target.id === 'pets') PetsView.close(); });
 $('mapBtn2').addEventListener('click', () => { Audio.unlock(); MapView.open(); });
 $('mapClose').addEventListener('click', () => MapView.close());
 $('map').addEventListener('click', e => { if (e.target.id === 'map') MapView.close(); });
@@ -2110,7 +2424,7 @@ $('albumBtn').addEventListener('click', () => Album.open());
 $('unlock').addEventListener('click', () => Album.open());
 $('albumClose').addEventListener('click', () => Album.close());
 $('album').addEventListener('click', e => { if (e.target.id === 'album') Album.close(); });
-document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (Album.isOpen()) { e.preventDefault(); Album.close(); } else if (MapView.isOpen()) { e.preventDefault(); MapView.close(); } });
+document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; if (PetsView.isOpen()) { e.preventDefault(); PetsView.close(); } else if (Album.isOpen()) { e.preventDefault(); Album.close(); } else if (MapView.isOpen()) { e.preventDefault(); MapView.close(); } });
 
 let resizeT = 0;
 window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(resize, 120); });
@@ -2123,7 +2437,7 @@ resize();
 Game.sessionPlayed = false;
 Game.startLevel(Store.get().level || 1);
 start();
-window.MossMoon = { Game, Scene, Store, Audio, UI, LEVEL_TABLE, levelParams }; // for testing / tinkering
+window.MossMoon = { Game, Scene, Store, Audio, UI, LEVEL_TABLE, levelParams, PetsView }; // for testing / tinkering
 </script>
 </body>
 </html>

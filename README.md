@@ -34,16 +34,33 @@ A tiny watercolor garden you wake with a tap. One glowing seed, a chain of bloom
 
 Every garden has its own short original tune (Moonlit Lullaby, Firefly Waltz, Mossy Steps, Petal Rain, Sleepy Pond, Star Garden). Each bloom in a chain plays the next note, long chains loop it with harmony and bass, and a full bloom finishes the phrase and resolves on a chord. The tune's name is on the results card.
 
+## Friends (pet companions)
+
+From level 3 a friend sits in the round button at the bottom right. Catches, Perfects, combo words and moonflowers fill the ring around it; when it's full the button bounces — tap it to use the friend's power. Tap it while it's still filling to open the **Friends** picker.
+
+| Friend | Power | How you meet them |
+|---|---|---|
+| Mochi | Spark roll: one extra spark | From the start |
+| Pip | Lucky peek: hops to the best seed and makes it golden (double points) | Open a moonflower |
+| Moon Moth | Moonglow: slows time for a few seconds | 500 lifetime moon-drops |
+| Nib | Shell shield: catches the next 3 seeds you'd miss | Catch a seed on the wave |
+| Sprig | Moon-breath: flies across the garden, waking every seed in its beam (free, no spark) | Hatch the egg |
+
+If you run out of sparks while Mochi or Sprig is ready, the round waits a few seconds for you to use them. If a level beats you twice, your friend starts the next try fully charged.
+
+## The dragon egg
+
+At level 8 a speckled egg appears on the hill below the cottage. Catches, Perfects, stars and full blooms warm it (tap it to see how warm). When it's warm enough it hatches at the start of your next level into **Sprig**, a baby moss dragon, who becomes your friend. Sprig grows with the stars you earn: Hatchling → Fledgling (12 stars) → Moon Dragon (36 stars), with bigger wings, longer horns and a wider beam each time.
+
 ## Creatures and the sticker album
 
 - **Mochi Mossling** sleeps beside the first seed, wakes on your first tap and hops at every 5th bloom.
 - **Pip** peeks out from behind moonflowers.
-- **Moon Moth** wakes at 500 lifetime moon‑drops and follows your blooms.
-- **Nib**, a tiny moon snail, lives by the pond. Tap its shell, or catch a seed, and it peeks out.
+- **Moon Moth** follows your blooms once awake.
+- **Nib**, a tiny moon snail, lives by the pond and peeks out when you catch seeds or tap its shell.
+- **Sprig** lives on the hill once hatched.
 
-The **sticker album** (Album button on the results card) holds 12 creature poses, each earned by a small feat: chains of 10, 25 and 35, moonflowers, 5 Perfects in one garden, catching 6 seeds in one garden, full blooms, and full blooms with a single spark. Locked stickers show as silhouettes with their goal.
-
-Garden unlocks: golden seeds (15‑chain), cottage lights (1500 drops), moonlit meadow (4000 drops).
+The **sticker album** holds 15 creature poses, each earned by a small feat (long chains, moonflowers, Perfects, full blooms, hatching and growing Sprig). Locked stickers show as silhouettes with their goal.
 
 ## Put it on your phone (GitHub Pages)
 
