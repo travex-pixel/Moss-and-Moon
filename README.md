@@ -4,6 +4,21 @@ A tiny watercolor garden you wake with a tap. One glowing seed, a chain of bloom
 
 **Play it:** open `index.html` in any modern browser. On a phone, the easiest way is GitHub Pages (see below).
 
+## New prototype: Bounce (`bounce.html`)
+
+A different core action, built to be more skilful and more watchable. Drag anywhere to aim (a dotted line previews the path), let go, and a glowing moon-drop falls from the moon cradle and bounces through the garden. Every flower it touches blooms; **bloom all the pink buds** to clear the level.
+
+- **10 drops per level.** Stars: clear it (★), with 2 drops to spare (★★), with 4 to spare (★★★).
+- **Mochi** slides along the bottom holding a leaf: land a drop in it for a **free drop**. A big shot (1,500+ points) also earns one.
+- **Multiplier** climbs as you clear buds (×2, ×3, ×5, ×10 on the last bud). Each flower in one drop plays the next note of the garden's tune; long shots earn combo words.
+- **Moonflowers** bloom everything around them; **lanterns** split your drop in two; later levels add **spinning rings** and **mossy stones**.
+- **The last bud**: when a drop closes in on it, time slows and the camera leans in. Hitting it triggers **Garden bloom!** — bonus lily pads (1K–10K) open at the bottom, every remaining flower blooms to the tune, and unused drops pay +1,000 each.
+- **Out of drops?** You're offered **one more drop** once per attempt. This is the slot designed for an optional rewarded ad later; for now it's free.
+- Difficulty was tuned by simulating a random aimer, a casual aimer (good aim with a few degrees of human error) and a perfect aimer: levels 1–6 are cleared almost every time by a casual player, levels 7–20 about 60–80% of the time, and most misses end with just 1–2 buds left.
+
+Open it at `https://travex-pixel.github.io/Moss-and-Moon/bounce.html` (or the file directly). Progress is saved separately from the classic game.
+
+
 ## How to play
 
 - Tap the glowing seed. It blooms and sends a ring of light out; seeds inside the ring wake and bloom in a chain.
